@@ -1,3 +1,5 @@
 pytest
 coverage
 flake8
+bump2version
+wheel
