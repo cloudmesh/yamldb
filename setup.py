@@ -52,7 +52,7 @@ setup(
     url=URL,
     packages=find_packages(),
     classifiers=[
-        "Development Status :: 1 - Planning"
+        "Development Status :: 1 - Planning",
         "Environment :: Web Environment",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: BSD License",
