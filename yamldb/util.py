@@ -5,9 +5,9 @@ def readfile(filename, mode='r'):
     :return:
     """
     if mode != 'r' and mode != 'rb':
-        Console.error(f"incorrect mode : expected 'r' or 'rb' given {mode}")
+        raise ValueError(f"incorrect mode : expected 'r' or 'rb' given {mode}")
     else:
-        with open(path_expand(filename), mode)as f:
+        with open(filename, mode)as f:
             content = f.read()
             f.close()
         return content
@@ -20,6 +20,6 @@ def writefile(filename, content):
     :param content: teh content
     :return:
     """
-    with open(path_expand(filename), 'w') as outfile:
+    with open(filename, 'w') as outfile:
         outfile.write(content)
         outfile.truncate()

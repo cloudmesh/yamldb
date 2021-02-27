@@ -79,7 +79,7 @@ class YamlDB:
                 #
                 # create entry
                 #
-                location[keys[-1]]= value
+                location[keys[-1]] = value
             else:
                 self.data[key] = value
 
@@ -89,7 +89,6 @@ class YamlDB:
             print(e)
             raise ValueError("unkown error")
 
-        yaml_file = self.data.copy()
         self.save()
 
     def __getitem__(self, item):
@@ -162,7 +161,6 @@ class YamlDB:
             self[key] = default
             return default
 
-
     '''
     def search(self, key, value=None):
         """
@@ -175,7 +173,6 @@ class YamlDB:
         result = flat.search(key, value)
         return result
     '''
-
 
     def __str__(self):
         if self.data is None:

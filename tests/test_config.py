@@ -5,31 +5,25 @@
 ###############################################################
 
 import os
-import textwrap
-from pathlib import Path
 from pprint import pprint
 
-import oyaml as yaml
 import pytest
-from cloudmesh.common.StopWatch import StopWatch
-from cloudmesh.common.Benchmark import Benchmark
-from cloudmesh.common.util import HEADING
-from cloudmesh.common.util import path_expand
-from cloudmesh.common.StopWatch import StopWatch
-from shutil import copyfile
 from yamldb.YamlDB import YamlDB
+
+from cloudmesh.common.StopWatch import StopWatch
+from cloudmesh.common.util import HEADING
 
 filename = "/tmp/cloudmesh.yaml"
 
 data = {
     "a": "1",
     "b": "2",
-    "c": { "c1": 3,  "c2": 3,  }
+    "c": {"c1": 3, "c2": 3, }
 }
+
 
 @pytest.mark.incremental
 class TestConfig:
-
 
     def test_YamlDB(self):
         HEADING()
@@ -40,7 +34,7 @@ class TestConfig:
 
     def test_if_yaml_file_exists(self):
         HEADING()
-        db = YamlDB(data=data, filename=filename)
+        YamlDB(data=data, filename=filename)
         assert os.path.isfile(filename)
 
     def test_dict(self):
@@ -52,7 +46,6 @@ class TestConfig:
         pprint(result)
         print(db)
         print(type(db.data))
-
 
     def test_subscription(self):
         HEADING()
@@ -84,14 +77,13 @@ class TestConfig:
         key = "cloudmesh.doesnotexist"
         StopWatch.start(f"db[{key}]")
         try:
-            value = db[key]
+            db[key]
             result = True
         except:
             result = False
         StopWatch.stop(f"db[{key}]")
 
         assert result is False
-
 
     def test_doesnotexist_get(self):
         HEADING()

@@ -15,8 +15,8 @@ install:
 	pip install -e .
 
 flake8:
-	cd ..; flake8 --max-line-length 124 --ignore=E722 cloudmesh-$(package)/cloudmesh
-	cd ..; flake8 --max-line-length 124 --ignore=E722 cloudmesh-$(package)/tests
+	cd ..; flake8 --max-line-length 124 --ignore=E722 $(package)/$(package)
+	cd ..; flake8 --max-line-length 124 --ignore=E722 $(package)/tests
 
 doc:
 	rm -rf docs
