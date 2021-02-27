@@ -5,9 +5,9 @@ from yamldb import Query
 db = YamlDB('path/to/db.yaml')
 user = Query()
 db.insert({'name': 'Gregor', 'age': 111})
-db.search(User.name == 'Gregor')
+db.search("[?name=='Gregor']")
 
-[{'name': 'John', 'age': 22}]
+[{'name': 'Gregor', 'age': 111}]
 
 """
 import oyaml as yaml
@@ -17,9 +17,9 @@ import jmespath
 
 class YamlDB:
 
-    def __init__(self, data=None, filename=None):
+    def __init__(self, data=None, filename=None, backend=":file:"):
         """
-        INitialized=s the data base, if data is not None it is
+        Initialized=s the data base, if data is not None it is
         used to initialize the DB.
 
         :param data:
@@ -27,6 +27,7 @@ class YamlDB:
         :param filename:
         :type filename:
         """
+        self.backend = backend
         self.filename = filename
         if data is not None:
             self.data = data
@@ -109,19 +110,6 @@ class YamlDB:
     def close(self):
         """
         Close the DB without flushing the current content
-        """
-        pass
-
-    def query(self, **query):
-        """
-        TODO: Not yet implemented
-
-        queries the database with attributes that all must be matched.
-
-        :param query: attribute value pairs , and
-        :type query:
-        :return: matching results
-        :rtype: dict
         """
         pass
 
@@ -251,8 +239,7 @@ class YamlDB:
                 element = element[key]
             del element
         except KeyError:
-            path = self.config_path
-            raise KeyError(f"The key '{item}' could not be found in the yaml file '{path}'")
+            raise KeyError(f"The key '{item}' could not be found in the yaml file '{self.filename}'")
         except Exception as e:
             print(e)
             raise ValueError("unkown error")
@@ -285,9 +272,8 @@ class YamlDB:
 
            see: https://jmespath.org/tutorial.html
 
-        :param key:
-        :param value:
-        :return:
+        :param query:
+        :return: dict with the result
         """
         return jmespath.search(query, self.data)
 
