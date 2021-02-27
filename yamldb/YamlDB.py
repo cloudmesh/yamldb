@@ -16,9 +16,9 @@ import oyaml as yaml
 
 class YamlDB:
 
-    def __init__(self, filename):
+    def __init__(self, data=None, filename=None):
         self.filename = filename
-        print (filename)
+        self.data = data
 
     def load(self, filename=None):
         name = filename or self.filename
@@ -41,14 +41,11 @@ class YamlDB:
         """
         pass
 
-    def __repr__(self):
-        pass
-
-    def __getattr__(self, item):
-        pass
+    def dict(self):
+        return self.data
 
     def __len__(self):
-        pass
+        len(self.date)
 
     def __setitem__(self, key, value):
         self.set(key, value)
@@ -82,19 +79,15 @@ class YamlDB:
                 #
                 # create entry
                 #
-                location[keys[len(keys) - 1]] = value
+                location[keys[-1]]= value
             else:
                 self.data[key] = value
 
         except KeyError:
-            path = self.config_path
-            Console.error(
-                "The key '{key}' could not be found in the yaml file '{path}'".format(
-                    **locals()))
-            sys.exit(1)
+            raise ValueError(f"The key '{key}' could not be found in the yaml file '{self.filename}'")
         except Exception as e:
             print(e)
-            sys.exit(1)
+            raise ValueError("unkown error")
 
         yaml_file = self.data.copy()
         self.save()
@@ -116,8 +109,7 @@ class YamlDB:
             for key in keys[1:]:
                 element = element[key]
         except KeyError:
-            path = self.config_path
-            raise KeyError(f"The key '{item}' could not be found in the yaml file '{path}'")
+            raise KeyError(f"The key '{item}' could not be found in the yaml file '{self.filename}'")
         except Exception as e:
             print(e)
             raise ValueError("unkown error")
@@ -151,6 +143,26 @@ class YamlDB:
             print(e)
             raise ValueError("unkown error")
 
+    def get(self, key, default=None):
+        """
+        A helper function for reading values from the config without
+        a chain of `get()` calls.
+
+        Usage:
+            mongo_conn = conf.get('db.mongo.MONGO_CONNECTION_STRING')
+            default_db = conf.get('default.db')
+            az_credentials = conf.get('data.service.azure.credentials')
+
+        :param default:
+        :param key: A string representing the value's path in the config.
+        """
+        try:
+            return self.data[key]
+        except KeyError:
+            self[key] = default
+            return default
+
+
     '''
     def search(self, key, value=None):
         """
@@ -163,3 +175,10 @@ class YamlDB:
         result = flat.search(key, value)
         return result
     '''
+
+
+    def __str__(self):
+        if self.data is None:
+            return ""
+        else:
+            return yaml.dump(self.data, default_flow_style=False, indent=2)
