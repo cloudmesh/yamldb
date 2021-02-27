@@ -10,44 +10,159 @@ db.search(User.name == 'Gregor')
 [{'name': 'John', 'age': 22}]
 
 """
-from yamldb.util import readfile
 import oyaml as yaml
+import os
+import jmespath
 
 
 class YamlDB:
 
     def __init__(self, data=None, filename=None):
+        """
+        INitialized=s the data base, if data is not None it is
+        used to initialize the DB.
+
+        :param data:
+        :type data:
+        :param filename:
+        :type filename:
+        """
         self.filename = filename
-        self.data = data
+        if data is not None:
+            self.data = data
+        self.flush()
+
+    def __iter__(self):
+        """
+        Itterates over the first level of the keys
+
+        :return:
+        :rtype:
+        """
+        return iter(self.data)
+
+    def __contains__(self, key):
+        """
+        Checks if the key is included in the db
+
+        :param key:
+        :type key:
+        :return:
+        :rtype:
+        """
+        found = True
+        try:
+            self[key]
+        except:
+            found = False
+        return found
+
+    def clear(self):
+        """
+        Removes all data
+
+        """
+        self.data.clear()
+        self.flush()
 
     def load(self, filename=None):
+        """
+        Loads the data from the specified filename
+
+        :param filename:
+        :type filename:
+        :return:
+        :rtype:
+        """
+        prefix = os.path.dirname(filename)
+        if not os.path.exists(prefix):
+            os.makedirs(prefix)
+
         name = filename or self.filename
-        content = readfile(name)
-        self.data = yaml.safe_load(content)
+
+        if os.path.exists(name):
+            with open(name, 'rb') as dbfile:
+                self.data = yaml.safe_load(dbfile) or dict()
 
     def save(self, filename=None):
+        """
+        saves the data to the specified filename
+
+        :param filename:
+        :type filename:
+        :return:
+        :rtype:
+        """
         name = filename or self.filename
-        with open(name, "w") as stream:
+        with open(name, "wb") as stream:
             yaml.safe_dump(self.data, stream, default_flow_style=False)
 
-    def query(self, **attributes):
+    def flush(self):
         """
+        saves the data to the file specified when the DB was loaded.
+
+        :return:
+        :rtype:
+        """
+        self.save()
+
+    def close(self):
+        """
+        Close the DB without flushing the current content
+        """
+        pass
+
+    def query(self, **query):
+        """
+        TODO: Not yet implemented
+
         queries the database with attributes that all must be matched.
 
-        :param attributes: attribute value pairs , and
-        :type attributes:
+        :param query: attribute value pairs , and
+        :type query:
         :return: matching results
         :rtype: dict
         """
         pass
 
     def dict(self):
+        """
+        Retruns the dict of the data
+
+        :return:
+        :rtype:
+        """
         return self.data
 
+    def yaml(self):
+        """
+        Retruns the yaml of the data
+
+        :return:
+        :rtype:
+        """
+        return str(self.data)
+
     def __len__(self):
-        len(self.date)
+        """
+        return the number of elements of the top level
+
+        :return:
+        :rtype:
+        """
+        len(self.data)
 
     def __setitem__(self, key, value):
+        """
+        Sets the item given at the key to value
+
+        :param key:
+        :type key:
+        :param value:
+        :type value:
+        :return:
+        :rtype:
+        """
         self.set(key, value)
 
     def set(self, key, value):
@@ -161,20 +276,28 @@ class YamlDB:
             self[key] = default
             return default
 
-    '''
-    def search(self, key, value=None):
+    def search(self, query):
         """
-        search("cloudmesh.cloud.*.cm.active", True)
+        Searches the data with jmsepath see: https://jmespath.org/
+
+        Example queries:
+           "a.*.c"
+
+           see: https://jmespath.org/tutorial.html
+
         :param key:
         :param value:
         :return:
         """
-        flat = FlatDict(self.data, sep=".")
-        result = flat.search(key, value)
-        return result
-    '''
+        return jmespath.search(query, self.data)
 
     def __str__(self):
+        """
+        Returns the yaml as a string
+
+        :return:
+        :rtype:
+        """
         if self.data is None:
             return ""
         else:

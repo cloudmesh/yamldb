@@ -1,15 +1,45 @@
-Documentation
-=============
+YamlDB
+======
+
+![https://img.shields.io/github/license/cloudmesh/yamldb](https://img.shields.io/github/license/cloudmesh/yamldb)
+
+[![image](https://img.shields.io/travis/TankerHQ/yamldb.svg?branch=main)](https://travis-ci.org/TankerHQ/cloudmesn-db)
+
+[![image](https://img.shields.io/pypi/pyversions/yamldb.svg)](https://pypi.org/project/yamldb)
+
+[![image](https://img.shields.io/pypi/v/yamldb.svg)](https://pypi.org/project/yamldb/)
 
 
-[![image](https://img.shields.io/travis/TankerHQ/cloudmesh-db.svg?branch=main)](https://travis-ci.org/TankerHQ/cloudmesn-db)
+YamlDB is an easy to use file based database using yaml as the format for the
+data represented in the file. This makes it possible to quickly change and add
+values in the file itself while it can than be loaded and used as dict in your
+application.
 
-[![image](https://img.shields.io/pypi/pyversions/cloudmesh-db.svg)](https://pypi.org/project/cloudmesh-db)
+It had the ability to use dot notations for the keys instead of nested brackets.
+It als creates parents if they do nt exist
 
-[![image](https://img.shields.io/pypi/v/cloudmesh-db.svg)](https://pypi.org/project/cloudmesh-db/)
 
-[![image](https://img.shields.io/github/license/TankerHQ/python-cloudmesh-db.svg)](https://github.com/TankerHQ/python-cloudmesh-db/blob/main/LICENSE)
+```
+pip install yamldb
 
-see cloudmesh.cmd5
+db = YamlDB(filename="data.yml")
 
-* https://github.com/cloudmesh/cloudmesh.cmd5
+db["a"] = "1"
+db["b.c"] = "2"
+
+d = db.get("a.b.c.d", default=3)
+
+db.load()
+  reloads the file
+  
+db.save()
+  saves the current db into the file
+```
+
+## Aalternatives
+
+* jmsepath: https://jmespath.org/
+* TinyDB: https://tinydb.readthedocs.io/en/latest/index.html
+* nsqlite: https://github.com/shaunduncan/nosqlite
+* MongoDB:
+* Codernity: ? http://labs.codernity.com/

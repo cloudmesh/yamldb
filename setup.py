@@ -24,6 +24,8 @@ def readfile(filename):
 
 
 requiers = """
+jmespath
+oyaml
 """.split("\n")
 
 version = readfile("VERSION")[0].strip()
