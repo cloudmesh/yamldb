@@ -15,14 +15,15 @@ import os
 
 import jmespath
 import oyaml as yaml
-
+from collections import MutableMapping
+from contextlib import suppress
 
 class YamlDB:
     """
     The YamlBD class uses a file based yaml file as its database backend.
     """
 
-    def __init__(self, data=None, filename=None, backend=":file:"):
+    def __init__(self, *, data=None, filename="yamldb.yml", backend=":file:"):
         """
         Initialized=s the data base, if data is not None it is
         used to initialize the DB.
@@ -32,11 +33,24 @@ class YamlDB:
         :param filename:
         :type filename:
         """
+        if backend not in [":file:", ":memory:"]:
+            raise ValueError("bakend must be :file: or :memory:")
         self.backend = backend
         self.filename = filename
-        if data is not None:
+
+        if os.path.exists(filename) and data is not None:
             self.data = data
-        self.flush()
+            self.save(filename=filename)
+        elif os.path.exists(filename) and data is None:
+            self.load(filename=filename)
+        elif not os.path.exists(filename) and data is not None:
+            self.data = data
+            self.save(filename=filename)
+        elif not os.path.exists(filename) and data is None:
+            self.data = {}
+            self.save(filename=filename)
+        else:
+            raise ValueError("Load failed")
 
     def __iter__(self):
         """
@@ -58,7 +72,7 @@ class YamlDB:
         """
         found = True
         try:
-            self[key]
+            self.__getitem__(key)
         except:
             found = False
         return found
@@ -100,8 +114,8 @@ class YamlDB:
         :rtype:
         """
         name = filename or self.filename
-        with open(name, "wb") as stream:
-            yaml.safe_dump(self.data, stream, default_flow_style=False)
+        with open(name, "w") as stream:
+            yaml.dump(self.data, stream, default_flow_style=False)
 
     def flush(self):
         """
@@ -110,13 +124,14 @@ class YamlDB:
         :return:
         :rtype:
         """
-        self.save()
+        if self.backend == ":file:":
+            self.save()
 
     def close(self):
         """
         Close the DB without flushing the current content
         """
-        pass  # noqa: W0107
+        self.flush()
 
     def dict(self):
         """
@@ -197,7 +212,37 @@ class YamlDB:
             print(e)
             raise ValueError("unkown error")
 
-        self.save()
+        self.flush()
+
+    def _delete_keys_from_dict(self, data, keys):
+        for key in keys:
+            with suppress(KeyError):
+                del data[key]
+        for value in data.values():
+            if isinstance(value, MutableMapping):
+                self._delete_keys_from_dict(value, keys)
+
+    def delete(self, item):
+        """
+        Deletes an item form the dict. The key is . separated
+        use it as follows get("a.b.c")
+        :param item:
+        :type item:
+        :return:
+        """
+        try:
+            if "." in item:
+                keys = item.split(".")
+            else:
+                del self.data[item]
+                return
+            self._delete_keys_from_dict(self.data, keys)
+        except Exception as e:
+            print(e)
+            raise ValueError("unkown error")
+
+    def __delitem__(self, key):
+        self.delete(key)
 
     def __getitem__(self, item):
         """
@@ -221,33 +266,6 @@ class YamlDB:
             print(e)
             raise ValueError("unkown error")
         return element
-
-    def __delitem__(self, item):
-        """
-
-        TODO: Implement this
-
-        gets an item form the dict. The key is . separated
-        use it as follows get("a.b.c")
-        :param item:
-        :type item:
-        :return:
-        """
-        try:
-            if "." in item:
-                keys = item.split(".")
-            else:
-                del self.data[item]
-                return
-            element = self.data
-            for key in keys:
-                element = element[key]
-            del element
-        except KeyError:
-            raise KeyError(f"The key '{item}' could not be found in the yaml file '{self.filename}'")
-        except Exception as e:
-            print(e)
-            raise ValueError("unkown error")
 
     def get(self, key, default=None):
         """
