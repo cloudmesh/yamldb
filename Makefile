@@ -18,6 +18,10 @@ flake8:
 	cd ..; flake8 --max-line-length 124 --ignore=E722 $(package)/$(package)
 	cd ..; flake8 --max-line-length 124 --ignore=E722 $(package)/tests
 
+pylint:
+	cd ..; pylint --rcfile=$(package)/.pylintrc  $(package)/$(package)
+	cd ..; pylint --rcfile=$(package)/.pylintrc  --disable=F0010 $(package)/tests
+
 doc:
 	rm -rf docs
 	mkdir -p dest

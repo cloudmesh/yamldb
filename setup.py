@@ -39,7 +39,7 @@ NAME = "yamldb"
 DESCRIPTION = "A database with yaml files as backend"
 AUTHOR = "Gregor von Laszewski"
 AUTHOR_EMAIL = "laszewski@gmail.com"
-URL = "https://github.com/laszewsk/yamldb"
+URL = "https://github.com/cloudmesh/yamldb"
 
 
 setup(

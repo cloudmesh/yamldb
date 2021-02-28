@@ -10,12 +10,17 @@ db.search("[?name=='Gregor']")
 [{'name': 'Gregor', 'age': 111}]
 
 """
-import oyaml as yaml
+# pylint: disable=C0103,W0107,W0702
 import os
+
 import jmespath
+import oyaml as yaml
 
 
 class YamlDB:
+    """
+    The YamlBD class uses a file based yaml file as its database backend.
+    """
 
     def __init__(self, data=None, filename=None, backend=":file:"):
         """
@@ -111,7 +116,7 @@ class YamlDB:
         """
         Close the DB without flushing the current content
         """
-        pass
+        pass  # noqa: W0107
 
     def dict(self):
         """
@@ -219,9 +224,9 @@ class YamlDB:
 
     def __delitem__(self, item):
         """
-        #
-        # BUG THIS DOES NOT WORK
-        #
+
+        TODO: Implement this
+
         gets an item form the dict. The key is . separated
         use it as follows get("a.b.c")
         :param item:
@@ -232,9 +237,9 @@ class YamlDB:
             if "." in item:
                 keys = item.split(".")
             else:
-                return self.data[item]
+                del self.data[item]
+                return
             element = self.data
-            print(keys)
             for key in keys:
                 element = element[key]
             del element
@@ -286,5 +291,5 @@ class YamlDB:
         """
         if self.data is None:
             return ""
-        else:
-            return yaml.dump(self.data, default_flow_style=False, indent=2)
+
+        return yaml.dump(self.data, default_flow_style=False, indent=2)

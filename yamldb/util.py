@@ -1,16 +1,21 @@
+"""
+A small set of utitlit functions, that we could also have gotten from
+cloudmesh.common.
+"""
+
 def readfile(filename, mode='r'):
     """
     returns the content of a file
     :param filename: the filename
     :return:
     """
-    if mode != 'r' and mode != 'rb':
+    if mode not in ['r', 'rb']:
         raise ValueError(f"incorrect mode : expected 'r' or 'rb' given {mode}")
-    else:
-        with open(filename, mode)as f:
-            content = f.read()
-            f.close()
-        return content
+
+    with open(filename, mode)as file:
+        content = file.read()
+        file.close()
+    return content
 
 
 def writefile(filename, content):
