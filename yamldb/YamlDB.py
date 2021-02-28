@@ -215,6 +215,8 @@ class YamlDB:
         self.flush()
 
     def _delete_keys_from_dict(self, data, keys):
+        # inspired from
+        # https://stackoverflow.com/questions/3405715/elegant-way-to-remove-fields-from-nested-dictionaries
         for key in keys:
             with suppress(KeyError):
                 del data[key]
