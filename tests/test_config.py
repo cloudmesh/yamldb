@@ -117,17 +117,15 @@ class TestConfig:
         assert "cloudmesh.doesnotexist" not in db
 
 
-    '''
     def test_search(self):
         db = YamlDB(data=data, filename=filename)
 
         StopWatch.start("search")
-        r = db.search("c.*", True)
+        r = db.search("c.*")
         StopWatch.stop("search")
         pprint (r)
-
+        assert ["c", "cc"] == r
         assert db is not None
-    '''
 
 
 
