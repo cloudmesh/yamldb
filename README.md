@@ -34,6 +34,10 @@ db.load()
   
 db.save()
   saves the current db into the file
+
+db.search("a.*.c")
+   quries the db
+   see: https://jmespath.org/tutorial.html
 ```
 
 ## Aalternatives
