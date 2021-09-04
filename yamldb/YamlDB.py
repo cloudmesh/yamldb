@@ -184,9 +184,12 @@ class YamlDB:
         :param key: A string representing the value's path in the config.
         :param value: value to be set.
         """
+        try:
+            if value.lower() in ['true', 'false']:
+                value = value.lower() == 'true'
+        except:
+            pass
 
-        if value.lower() in ['true', 'false']:
-            value = value.lower() == 'true'
         try:
             if "." in key:
                 keys = key.split(".")
