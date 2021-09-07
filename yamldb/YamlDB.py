@@ -85,6 +85,9 @@ class YamlDB:
         self.data.clear()
         self.flush()
 
+    def keys(self):
+        return self.data.keys()
+
     def load(self, filename=None):
         """
         Loads the data from the specified filename
