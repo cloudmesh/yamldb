@@ -15,7 +15,7 @@ import os
 
 import jmespath
 import oyaml as yaml
-from collections import MutableMapping
+from collections.abc import MutableMapping
 from contextlib import suppress
 
 class YamlDB:
@@ -106,6 +106,26 @@ class YamlDB:
         if os.path.exists(name):
             with open(name, 'rb') as dbfile:
                 self.data = yaml.safe_load(dbfile) or dict()
+
+    def update(self, filename=None):
+        """
+        Inserts the data from the specified filename
+
+        :param filename:
+        :type filename:
+        :return:
+        :rtype:
+        """
+        #prefix = os.path.dirname(filename)
+        #if not os.path.exists(prefix):
+        #    os.makedirs(prefix)
+
+        #name = filename or self.filename
+
+        if os.path.exists(filename):
+            with open(filename, 'rb') as dbfile:
+                data = yaml.safe_load(dbfile) or dict()
+                self.data.update(data)
 
     def save(self, filename=None):
         """
