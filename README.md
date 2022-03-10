@@ -46,4 +46,3 @@ db.search("a.*.c")
 * TinyDB: https://tinydb.readthedocs.io/en/latest/index.html
 * nsqlite: https://github.com/shaunduncan/nosqlite
 * MongoDB:
-* Codernity: ? http://labs.codernity.com/
