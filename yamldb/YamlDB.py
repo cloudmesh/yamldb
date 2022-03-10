@@ -119,13 +119,16 @@ class YamlDB:
         #prefix = os.path.dirname(filename)
         #if not os.path.exists(prefix):
         #    os.makedirs(prefix)
-
-        #name = filename or self.filename
+        # the entry must have an id which is used as the name for the entry
 
         if os.path.exists(filename):
             with open(filename, 'rb') as dbfile:
                 data = yaml.safe_load(dbfile) or dict()
-                self.data.update(data)
+                id = data["id"] or "unkown"
+                if id in ["unkown", "MISSING"]:
+                    print(f"Error: id not found for {filename}")
+                d = {id: data}
+                self.data.update(d)
 
     def save(self, filename=None):
         """
