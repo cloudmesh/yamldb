@@ -13,8 +13,15 @@ from yamldb.YamlDB import YamlDB
 from cloudmesh.common.StopWatch import StopWatch
 from cloudmesh.common.util import HEADING
 from cloudmesh.common.util import readfile
+from cloudmesh.common.systeminfo import os_is_windows
+from cloudmesh.common.util import path_expand
 
-filename = "/tmp/cloudmesh.yaml"
+if os_is_windows:
+    filename = "~/.cloudmesh/cloudmesh.yaml"
+else:
+    filename = "/tmp/cloudmesh.yaml"
+
+filename = path_expand(filename)
 
 data = {
     "a": 1,
