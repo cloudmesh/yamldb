@@ -47,7 +47,7 @@ db.search("a.*.c")
 * nsqlite: https://github.com/shaunduncan/nosqlite
 * MongoDB:
 
-## Acknowledgements
+## Acknowledgments
 
 Continued work was in part funded by the NSF
 CyberTraining: CIC: CyberTraining for Students and Technologies
