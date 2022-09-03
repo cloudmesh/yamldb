@@ -46,3 +46,9 @@ db.search("a.*.c")
 * TinyDB: https://tinydb.readthedocs.io/en/latest/index.html
 * nsqlite: https://github.com/shaunduncan/nosqlite
 * MongoDB:
+
+## Acknowledgements
+
+Continued work was in part funded by the NSF
+CyberTraining: CIC: CyberTraining for Students and Technologies
+from Generation Z with the awadrd numbers 1829704 and 2200409.
