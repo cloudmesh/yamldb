@@ -17,6 +17,7 @@ import jmespath
 import oyaml as yaml
 from collections.abc import MutableMapping
 from contextlib import suppress
+from cloudmesh.common import dotdict
 
 class YamlDB:
     """
@@ -52,6 +53,31 @@ class YamlDB:
         else:
             raise ValueError("Load failed")
 
+    def print_dictionary(self, dic, indent=0):
+        if len(dic) == 0:
+            print('\t' * indent + '{}')
+        for key, value in dic.items():
+            print('\t' * indent + str(key))
+            if isinstance(value, dict):
+                self.print_dictionary(value, indent + 1)
+            else:
+                print('\t' * (indent + 1) + str(type(value)))
+    def get_keys(self, d=None, keys_list=None, parent=""):
+        if keys_list is None:
+            keys_list = []
+            keys_list = list(self.data.keys())
+        if d is None:
+            d = dict(self.data)
+        for key, value in d.items():
+            if isinstance(d[key], dict):
+                self.get_keys(d[key], keys_list, parent=key)
+            else:
+                keys_list.append(f"{parent}.{key}")
+        return keys_list
+
+    def keys(self):
+        return self.get_keys()
+
     def __iter__(self):
         """
         Itterates over the first level of the keys
@@ -84,9 +110,6 @@ class YamlDB:
         """
         self.data.clear()
         self.flush()
-
-    def keys(self):
-        return self.data.keys()
 
     def load(self, filename=None):
         """
@@ -248,10 +271,21 @@ class YamlDB:
         # https://stackoverflow.com/questions/3405715/elegant-way-to-remove-fields-from-nested-dictionaries
         for key in keys:
             with suppress(KeyError):
+                print ("DELETE", key, keys)
                 del data[key]
         for value in data.values():
             if isinstance(value, MutableMapping):
                 self._delete_keys_from_dict(value, keys)
+        # found = dict(data)
+        # for key in keys:
+        #     with suppress(KeyError):
+        #         print ("DELETE", key, keys)
+        #         found = found[key]
+        #         k = key
+        #         input("LLL")
+        # if found:
+        #     del data[k]
+
 
     def delete(self, item):
         """
@@ -262,15 +296,23 @@ class YamlDB:
         :return:
         """
         try:
-            if "." in item:
-                keys = item.split(".")
-            else:
-                del self.data[item]
-                return
-            self._delete_keys_from_dict(self.data, keys)
+             if "." in item:
+                 keys = item.split(".")
+                 d = self.data
+                 for key in keys[:-1]:
+                     d = d[key]
+                     print ("K", key, d)
+                 delkey = keys[-1]
+                 del d[key]
+                 #self._delete_keys_from_dict(self.data, keys)
+             else:
+                 del self.data[item]
+                 return
         except Exception as e:
-            print(e)
-            raise ValueError("unkown error")
+             print(e)
+             # raise ValueError("unkown error")
+
+
 
     def __delitem__(self, key):
         self.delete(key)

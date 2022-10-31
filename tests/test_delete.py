@@ -28,7 +28,9 @@ filename = path_expand(filename)
 
 data = {
     "floor": {
-        "key": "value"
+        "key": "value",
+        "key_a": "value_a",
+        "key_b": "value_b"
     }
 }
 
@@ -43,6 +45,8 @@ class TestConfig:
         HEADING()
         global data
         print (data)
+        assert os.path.isfile(filename)
+
         StopWatch.start("init")
         db = YamlDB(data=dict(data), filename=filename)
         StopWatch.stop("init")
@@ -54,17 +58,21 @@ class TestConfig:
         print(db)
         banner("value")
         print (db["floor.key"])
-
         assert db["floor.key"] == "value"
-        assert os.path.isfile(filename)
 
-        banner("delete")
-        StopWatch.start("delete")
-        db.delete("floor.key")
-        StopWatch.stop("delete")
-        assert "floor.key" not in db
-        banner("db.data after delete")
-        print(db)
+        keys = db.keys()
+        assert len(keys) == 4
+        print (keys)
+
+        # banner("delete")
+        # StopWatch.start("delete")
+        # db.delete("floor.key")
+        # StopWatch.stop("delete")
+        # assert "floor.key" not in db
+        # banner("db.data after delete")
+        # print(db)
+
+class g:
 
     def test_read_from_file(self):
         HEADING()
@@ -112,15 +120,25 @@ class TestConfig:
 
 
         db = YamlDB(filename=self.filename)
-        db["floor.a"] = "value1"
-        db["floor.b"] = "value2"
+        db["floor.a"] = "value_a"
+        db["floor.b"] = "value_b"
         db.save()
 
-        banner("db.data values")
-        print(db)
+        banner("db values")
+        print("BBBB", db)
+
+        for key in ["floor.a", "floor.b"]:
+            print(f"get   : {key}: {db[key]}")
+            r = db.search("floor.a")
+            print(f"search: {key}: {r}")
+
+
 
         db.delete("floor.a")
+
         db.save()
+        print("AAAA", db.data)
+
 
         banner("db.data delete a")
         print(db)
