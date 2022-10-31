@@ -50,10 +50,14 @@ class TestConfig:
         assert db["floor.key"] == "value"
         assert os.path.isfile(filename)
 
+        banner("delete")
         StopWatch.start("delete")
         db.delete("floor.key")
         StopWatch.stop("delete")
         assert "floor.key" not in db
+        banner("db.data after delete")
+        print(db)
+
 
     def test_StopWatch(self):
         StopWatch.benchmark(sysinfo=False)
