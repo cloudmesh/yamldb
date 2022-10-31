@@ -24,6 +24,8 @@ else:
 
 filename = path_expand(filename)
 
+
+
 data = {
     "floor": {
         "key": "value"
@@ -46,6 +48,30 @@ class TestConfig:
         print(db)
         banner("value")
         print (db["floor.key"])
+
+        assert db["floor.key"] == "value"
+        assert os.path.isfile(filename)
+
+        banner("delete")
+        StopWatch.start("delete")
+        db.delete("floor.key")
+        StopWatch.stop("delete")
+        assert "floor.key" not in db
+        banner("db.data after delete")
+        print(db)
+
+    def test_read_from_file(self):
+        HEADING()
+        self.filename = "tests/test.yml"
+        self.filename = os.path.abspath(filename)
+        print(self.filename)
+        db = YamlDB(filename=self.filename)
+        db.save()
+
+        banner("db.data")
+        print(db)
+        banner("value")
+        print(db["floor.key"])
 
         assert db["floor.key"] == "value"
         assert os.path.isfile(filename)
