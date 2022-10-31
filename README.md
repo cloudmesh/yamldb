@@ -38,6 +38,9 @@ db.save()
 db.search("a.*.c")
    quries the db
    see: https://jmespath.org/tutorial.html
+   
+db.delete("b.c")
+    deletes the key b.c
 ```
 
 ## Aalternatives
