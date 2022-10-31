@@ -15,6 +15,7 @@ from cloudmesh.common.util import HEADING
 from cloudmesh.common.util import readfile
 from cloudmesh.common.systeminfo import os_is_windows
 from cloudmesh.common.util import path_expand
+from cloudmesh.common.util import banner
 
 if os_is_windows:
     filename = "~/.cloudmesh/cloudmesh.yaml"
@@ -39,10 +40,14 @@ class TestConfig:
         StopWatch.stop("init")
         db.save()
         content = readfile(filename)
-        print(db.data)
+        banner("content")
         print(content)
+        banner("db.data")
+        print(db)
+        banner("value")
+        print (db["floor.key"])
 
-        assert "floor.key" in db.data
+        assert db["floor.key"] == "value"
         assert os.path.isfile(filename)
 
         StopWatch.start("delete")
