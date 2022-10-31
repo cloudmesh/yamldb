@@ -62,8 +62,13 @@ class TestConfig:
 
     def test_read_from_file(self):
         HEADING()
-        self.filename = "tests/test.yml"
-        self.filename = os.path.abspath(filename)
+        self.filename = "tests/test.yaml"
+
+        banner(self.filename)
+        content = readfile(self.filename)
+        print(content)
+
+
         print(self.filename)
         db = YamlDB(filename=self.filename)
         db.save()
@@ -74,15 +79,22 @@ class TestConfig:
         print(db["floor.key"])
 
         assert db["floor.key"] == "value"
-        assert os.path.isfile(filename)
 
         banner("delete")
         StopWatch.start("delete")
         db.delete("floor.key")
+        db.save()
         StopWatch.stop("delete")
         assert "floor.key" not in db
         banner("db.data after delete")
         print(db)
+
+        banner(self.filename)
+        content = readfile(self.filename)
+        print (content)
+
+
+
 
 
     def test_StopWatch(self):
