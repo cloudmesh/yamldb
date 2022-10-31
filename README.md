@@ -53,6 +53,10 @@ pip install -r requierments-dev.txt
 
 Then you can run the a test with 
 
+```bash
+pytest -v --capture=no tests/test_config.py
+```
+
 ## Aalternatives
 
 * jmsepath: https://jmespath.org/
