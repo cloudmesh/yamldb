@@ -43,6 +43,16 @@ db.delete("b.c")
     deletes the key b.c
 ```
 
+## Development and tests
+
+The bets way to contribute is with issues and pull requests. To run the tests you need to install some development requirements with
+
+```bash
+pip install -r requierments-dev.txt
+```
+
+Then you can run the a test with 
+
 ## Aalternatives
 
 * jmsepath: https://jmespath.org/
