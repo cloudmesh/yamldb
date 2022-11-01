@@ -26,7 +26,7 @@ class YamlDB:
 
     def __init__(self, *, data=None, filename="yamldb.yml", backend=":file:"):
         """
-        Initialized=s the data base, if data is not None it is
+        Initializes the database, if data is not None it is
         used to initialize the DB.
 
         :param data:
@@ -35,7 +35,7 @@ class YamlDB:
         :type filename:
         """
         if backend not in [":file:", ":memory:"]:
-            raise ValueError("bakend must be :file: or :memory:")
+            raise ValueError("backend must be :file: or :memory:")
         self.backend = backend
         self.filename = filename
 
@@ -147,8 +147,8 @@ class YamlDB:
         if os.path.exists(filename):
             with open(filename, 'rb') as dbfile:
                 data = yaml.safe_load(dbfile) or dict()
-                id = data["id"] or "unkown"
-                if id in ["unkown", "MISSING"]:
+                id = data["id"] or "unknown"
+                if id in ["unknown", "MISSING"]:
                     print(f"Error: id not found for {filename}")
                 d = {id: data}
                 self.data.update(d)
@@ -262,7 +262,7 @@ class YamlDB:
             raise ValueError(f"The key '{key}' could not be found in the yaml file '{self.filename}'")
         except Exception as e:
             print(e)
-            raise ValueError("unkown error")
+            raise ValueError("unknown error")
 
         self.flush()
 
@@ -289,7 +289,7 @@ class YamlDB:
 
     def delete(self, item):
         """
-        Deletes an item form the dict. The key is . separated
+        Deletes an item from the dict. The key is . separated
         use it as follows get("a.b.c")
         :param item:
         :type item:
@@ -310,7 +310,7 @@ class YamlDB:
                  return
         except Exception as e:
              print(e)
-             # raise ValueError("unkown error")
+             # raise ValueError("unknown error")
 
 
 
@@ -319,7 +319,7 @@ class YamlDB:
 
     def __getitem__(self, item):
         """
-        gets an item form the dict. The key is . separated
+        gets an item from the dict. The key is . separated
         use it as follows get("a.b.c")
         :param item:
         :type item:
@@ -337,7 +337,7 @@ class YamlDB:
             raise KeyError(f"The key '{item}' could not be found in the yaml file '{self.filename}'")
         except Exception as e:
             print(e)
-            raise ValueError("unkown error")
+            raise ValueError("unknown error")
         return element
 
     def get(self, key, default=None):
