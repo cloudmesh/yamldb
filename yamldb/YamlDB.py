@@ -45,13 +45,24 @@ class YamlDB:
         elif os.path.exists(filename) and data is None:
             self.load(filename=filename)
         elif not os.path.exists(filename) and data is not None:
+            self._create_dir(filename)
             self.data = data
             self.save(filename=filename)
         elif not os.path.exists(filename) and data is None:
+            self._create_dir(filename)
             self.data = {}
             self.save(filename=filename)
         else:
             raise ValueError("Load failed")
+
+
+    def _create_dir(self, filename):
+        directory = os.path.dirname(filename)
+        try:
+            if not os.path.isdir(directory):
+                os.makedirs(directory, exist_ok=True)
+        except:
+            raise ValueError(f"YAMLDB: could not create directory={directory}")
 
     def print_dictionary(self, dic, indent=0):
         if len(dic) == 0:
@@ -62,6 +73,7 @@ class YamlDB:
                 self.print_dictionary(value, indent + 1)
             else:
                 print('\t' * (indent + 1) + str(type(value)))
+
     def get_keys(self, d=None, keys_list=None, parent=""):
         if keys_list is None:
             keys_list = []
