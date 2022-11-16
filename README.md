@@ -47,10 +47,14 @@ db.search("a.*.c")
 
 ## Development and tests
 
-The bets way to contribute is with issues and pull requests. To run the tests you need to install some development requirements with
+The best way to contribute is with issues and pull requests. You will need to check out the development version such as
 
 ```bash
-pip install -r requierments-dev.txt
+git clone https://github.com/cloudmesh/yamldb.git
+cd yamldb
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
+pip install -e .
 ```
 
 Then you can run the a test with 
