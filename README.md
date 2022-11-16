@@ -18,6 +18,7 @@ application.
 It had the ability to use dot notations for the keys instead of nested brackets.
 It als creates parents if they do nt exist
 
+Note: you must be using python 3.8 or newer
 
 ```
 pip install yamldb
