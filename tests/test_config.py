@@ -16,7 +16,7 @@ from cloudmesh.common.util import readfile
 from cloudmesh.common.systeminfo import os_is_windows
 from cloudmesh.common.util import path_expand
 
-if os_is_windows:
+if os_is_windows():
     filename = "~/.cloudmesh/cloudmesh.yaml"
 else:
     filename = "/tmp/cloudmesh.yaml"

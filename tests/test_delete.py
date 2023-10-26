@@ -18,7 +18,7 @@ from cloudmesh.common.systeminfo import os_is_windows
 from cloudmesh.common.util import path_expand
 from cloudmesh.common.util import banner
 
-if os_is_windows:
+if os_is_windows():
     filename = "~/.cloudmesh/cloudmesh.yaml"
 else:
     filename = "/tmp/cloudmesh.yaml"
