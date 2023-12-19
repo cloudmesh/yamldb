@@ -1,7 +1,6 @@
 YamlDB
 ======
 
-
 [![image](https://img.shields.io/pypi/pyversions/yamldb.svg)](https://pypi.org/project/yamldb)
 [![image](https://img.shields.io/pypi/v/yamldb.svg)](https://pypi.org/project/yamldb/)
 
@@ -76,12 +75,12 @@ Then you can run the a test with
 pytest -v --capture=no tests/test_config.py
 ```
 
-## Aalternatives
+## Alternatives
 
-* jmsepath: https://jmespath.org/
-* TinyDB: https://tinydb.readthedocs.io/en/latest/index.html
-* nsqlite: https://github.com/shaunduncan/nosqlite
-* MongoDB:
+* jmsepath: <https://jmespath.org/>
+* TinyDB:   <https://tinydb.readthedocs.io/en/latest/index.html>
+* nsqlite:  <https://github.com/shaunduncan/nosqlite>
+* MongoDB:  This is quite a big package
 
 ## Acknowledgments
 
