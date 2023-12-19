@@ -29,3 +29,7 @@ jobs:
           pytest tests/test_config.py 
           pytest tests/test_delete.py
           pytest tests/test_issues.py
+
+      - name: Run Tox Tests
+        run: |
+          tox
