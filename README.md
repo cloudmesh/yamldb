@@ -9,7 +9,6 @@ YamlDB
 [![General badge](https://img.shields.io/badge/Status-Production-<COLOR>.svg)](https://shields.io/)
 [![GitHub issues](https://img.shields.io/github/issues/cloudmesh/yamldb.svg)](https://github.com/cloudmesh/yamldb/issues)
 [![Contributors](https://img.shields.io/github/contributors/cloudmesh/yamldb.svg)](https://github.com/cloudmesh/yamldb/graphs/contributors)
-
 [![General badge](https://img.shields.io/badge/Other-repos-<COLOR>.svg)](https://github.com/cloudmesh)
 
 
