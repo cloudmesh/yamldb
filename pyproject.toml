@@ -11,7 +11,7 @@ name = "yamldb"
 version = "1.0.2"
 description = "A set of useful APIs for cloudmesh"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 license = {file = "LICENSE"}
 
 authors = [
