@@ -1,13 +1,9 @@
 YamlDB
 ======
 
+[![GitHub Repo](https://img.shields.io/badge/github-repo-green.svg)](https://github.com/cloudmesh/yamldb)
 [![image](https://img.shields.io/pypi/pyversions/yamldb.svg)](https://pypi.org/project/yamldb)
 [![image](https://img.shields.io/pypi/v/yamldb.svg)](https://pypi.org/project/yamldb/)
-
-
-[![GitHub Repo](https://img.shields.io/badge/github-repo-green.svg)](https://github.com/cloudmesh/yamldb)
-[![image](https://img.shields.io/pypi/pyversions/cloudmesh/yamldb.svg)](https://pypi.org/project/cloudmesh/yamldb)
-[![image](https://img.shields.io/pypi/v/cloudmesh/yamldb.svg)](https://pypi.org/project/cloudmesh/yamldb/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 [![General badge](https://img.shields.io/badge/Status-Production-<COLOR>.svg)](https://shields.io/)
