@@ -1,3 +1,4 @@
+tox
 setuptools
 pytest
 coverage
