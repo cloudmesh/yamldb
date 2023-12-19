@@ -29,13 +29,13 @@ data = {
     "c": {
         "c1": "c",
         "c2": "cc",
-    }
+    },
 }
+
 
 @pytest.mark.incremental
 class TestConfig:
-
-    def test_init(self):
+    def test_01_init(self):
         HEADING()
         StopWatch.start("init")
         db = YamlDB(data=data, filename=filename)
@@ -49,16 +49,16 @@ class TestConfig:
         assert db.data["c"]["c1"] == "c"
         assert os.path.isfile(filename)
 
-    def test_read(self):
+    def test_02_read(self):
         HEADING()
         StopWatch.start("read")
         db = YamlDB(filename=filename)
         db.load(filename=filename)
         StopWatch.stop("read")
-        assert type (db["a"]) == int
+        assert type(db["a"]) == int
         assert "a" in db.data
 
-    def test_dict(self):
+    def test_03_dict(self):
         HEADING()
         db = YamlDB(filename=filename)
         StopWatch.start("dict")
@@ -70,7 +70,7 @@ class TestConfig:
         assert "a" in result
         assert "c.c1" in db
 
-    def test_set(self):
+    def test_04_set_nested(self):
         HEADING()
         StopWatch.start("set")
         db = YamlDB(filename=filename)
@@ -79,7 +79,7 @@ class TestConfig:
         print(db["cloudmesh.test.nested"])
         assert db["cloudmesh.test.nested"] == "Gregor"
 
-    def test_doesnotexist_key(self):
+    def test_05_doesnotexist_key(self):
         HEADING()
         db = YamlDB(filename=filename)
 
@@ -94,7 +94,7 @@ class TestConfig:
 
         assert result is False
 
-    def test_get_create(self):
+    def test_06_get_create(self):
         HEADING()
         db = YamlDB(filename=filename)
 
@@ -107,34 +107,37 @@ class TestConfig:
 
         assert value == "Hallo"
 
-    def test_set(self):
-        HEADING()
-        db = YamlDB(filename=filename)
-        key = "cloudmesh.doesnotexist"
-
-        StopWatch.start("delete")
-        db["cloudmesh.test.a"] = "aa"
-        assert "cloudmesh.test" in db
-        db.delete("cloudmesh.test")
-        db.delete("a")
-        del db[key]
-        StopWatch.stop("delete")
-        assert "a" not in db
-        assert "cloudmesh.test" not in db
-        assert "cloudmesh.doesnotexist" not in db
-
-
-    def test_search(self):
+    def test_07_search(self):
         db = YamlDB(data=data, filename=filename)
 
         StopWatch.start("search")
         r = db.search("c.*")
         StopWatch.stop("search")
-        pprint (r)
+        pprint(r)
         assert ["c", "cc"] == r
         assert db is not None
 
+    def test__08_set_does_not_exist(self):
+        HEADING()
+        db = YamlDB(filename=filename)
+        key = "cloudmesh.doesnotexist"
 
+        db["cloudmesh.test.a"] = "aa"
+        print(db)
 
-    def test_StopWatch(self):
+        StopWatch.start("delete")
+        db.delete("a")  # does not throw exception
+        print(db)
+
+        assert "cloudmesh.test" in db
+        db.delete("cloudmesh.test")
+        print(db)
+        assert "cloudmesh.test" not in db  # this is a bug
+
+        del db[key]
+        StopWatch.stop("delete")
+        assert "a" not in db
+        assert "cloudmesh.doesnotexist" not in db
+
+    def test_09_StopWatch(self):
         StopWatch.benchmark(sysinfo=False)

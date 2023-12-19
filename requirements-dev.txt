@@ -1,7 +1,11 @@
+setuptools
 pytest
 coverage
 flake8
 bump2version
 wheel
 twine
+pytest-cov
+pip-tools
 cloudmesh-common
+
