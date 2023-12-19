@@ -8,7 +8,7 @@ requires = [
 
 [project]
 name = "yamldb"
-version = "1.0.1"
+version = "1.0.2"
 description = "A set of useful APIs for cloudmesh"
 readme = "README.md"
 requires-python = ">=3.7"

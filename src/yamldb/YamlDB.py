@@ -69,7 +69,9 @@ class YamlDB:
                 try:
                     os.makedirs(directory, exist_ok=True)
                 except OSError as e:
-                    raise ValueError(f"YAMLDB: could not create directory={directory}") from e
+                    raise ValueError(
+                        f"YAMLDB: could not create directory={directory}"
+                    ) from e
 
     def print_dictionary(self, dic, indent=0):
         """
@@ -194,19 +196,20 @@ class YamlDB:
                 d = {id: data}
                 self.data.update(d)
 
-    def save(self, filename=None):
+    def save(self, filename=None, indent=None):
         """
         Saves the data to the specified filename.
 
         Args:
             filename (str): The name of the file to save the data to. If not provided, the current filename will be used.
+            indent (int): The number of spaces to use for indentation. If not provided, the default indentation will be used.
 
         Returns:
             None
         """
         name = filename or self.filename
         with open(name, "w") as stream:
-            yaml.dump(self.data, stream, default_flow_style=False)
+            yaml.dump(self.data, stream, default_flow_style=False, indent=indent)
 
     def flush(self):
         """
