@@ -5,15 +5,16 @@ YamlDB
 [![image](https://img.shields.io/pypi/v/yamldb.svg)](https://pypi.org/project/yamldb/)
 
 
-[![GitHub Repo](https://img.shields.io/badge/github-repo-green.svg)](https://github.com/cloudmesh/cloudmesh/yamldb)
+[![GitHub Repo](https://img.shields.io/badge/github-repo-green.svg)](https://github.com/cloudmesh/yamldb)
 [![image](https://img.shields.io/pypi/pyversions/cloudmesh/yamldb.svg)](https://pypi.org/project/cloudmesh/yamldb)
 [![image](https://img.shields.io/pypi/v/cloudmesh/yamldb.svg)](https://pypi.org/project/cloudmesh/yamldb/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 [![General badge](https://img.shields.io/badge/Status-Production-<COLOR>.svg)](https://shields.io/)
-[![GitHub issues](https://img.shields.io/github/issues/cloudmesh/cloudmesh/yamldb.svg)](https://github.com/cloudmesh/cloudmesh/yamldb/issues)
-[![Contributors](https://img.shields.io/github/contributors/cloudmesh/cloudmesh/yamldb.svg)](https://github.com/cloudmesh/cloudmesh/yamldb/graphs/contributors)
-[![General badge](https://img.shields.io/badge/Other-repos-<COLOR>.svg)](https://github.com/cloudmesh/cloudmesh)
+[![GitHub issues](https://img.shields.io/github/issues/cloudmesh/yamldb.svg)](https://github.com/cloudmesh/yamldb/issues)
+[![Contributors](https://img.shields.io/github/contributors/cloudmesh/yamldb.svg)](https://github.com/cloudmesh/yamldb/graphs/contributors)
+
+[![General badge](https://img.shields.io/badge/Other-repos-<COLOR>.svg)](https://github.com/cloudmesh)
 
 
 [![Linux](https://img.shields.io/badge/OS-Linux-orange.svg)](https://www.linux.org/)
