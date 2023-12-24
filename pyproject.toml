@@ -9,7 +9,7 @@ requires = [
 [project]
 name = "yamldb"
 version = "1.0.3"
-description = "A set of useful APIs for cloudmesh"
+description = "A file based database using yaml as file format"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {file = "LICENSE"}
@@ -64,6 +64,15 @@ dependencies = [
 
 [project.urls]
 "Documentation" = "https://github.com/cloudmesh/yamldb"
+
+
+[project.urls]
+Homepage = "https://github.com/cloudmesh/yamldb"
+Documentation = "https://github.com/cloudmesh/yamldb/blob/main/README.md"
+Repository = "https://github.com/cloudmesh/yamldb.git"
+Issues = "https://github.com/cloudmesh/yamldb/issues"
+Changelog = "https://github.com/cloudmesh/yamldb/blob/main/CHANGELOG.md"
+
 
 [tool.setuptools.packages.find]
 where = ["src/"]

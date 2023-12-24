@@ -17,17 +17,17 @@ YamlDB
 [![Windows](https://img.shields.io/badge/OS-Windows-blue.svg)](https://www.microsoft.com/windows)
 
 
-YamlDB is an easy to use file based database using yaml as the format for the
+YamlDB is an easy to use file-based database using YAML as the format for the
 data represented in the file. This makes it possible to quickly change and add
-values in the file itself while it can than be loaded and used as dict in your
+values in the file itself while it can then be loaded and used as a dict in your
 application.
 
-It had the ability to use dot notations for the keys instead of nested brackets.
-It als creates parents if they do nt exist
+It has the ability to use a dot notations for the keys instead of nested brackets.
+It also creates parents if they do not exist.
 
 Note: you must be using python 3.8 or newer
 
-```
+```python
 pip install yamldb
 
 db = YamlDB(filename="data.yml")
@@ -73,13 +73,13 @@ pytest -v --capture=no tests/test_config.py
 
 ## Alternatives
 
-* jmsepath: <https://jmespath.org/>
+* jmespath: <https://jmespath.org/>
 * TinyDB:   <https://tinydb.readthedocs.io/en/latest/index.html>
-* nsqlite:  <https://github.com/shaunduncan/nosqlite>
-* MongoDB:  This is quite a big package
+* nosqlite:  <https://github.com/shaunduncan/nosqlite>
+* MongoDB:  This is quite a big package and we developed yamldb to replace it when mongo is not needed.
 
 ## Acknowledgments
 
 Continued work was in part funded by the NSF
 CyberTraining: CIC: CyberTraining for Students and Technologies
-from Generation Z with the awadrd numbers 1829704 and 2200409.
+from Generation Z with the award numbers 1829704 and 2200409.

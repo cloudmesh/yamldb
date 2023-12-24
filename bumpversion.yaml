@@ -1,5 +1,4 @@
 bumpversion:
   - src/yamldb/__init__.py
-  - src/yamldb/__version__.py
   - pyproject.toml
   - VERSION
