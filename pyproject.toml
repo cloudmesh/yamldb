@@ -63,10 +63,6 @@ dependencies = [
 ]
 
 [project.urls]
-"Documentation" = "https://github.com/cloudmesh/yamldb"
-
-
-[project.urls]
 Homepage = "https://github.com/cloudmesh/yamldb"
 Documentation = "https://github.com/cloudmesh/yamldb/blob/main/README.md"
 Repository = "https://github.com/cloudmesh/yamldb.git"
