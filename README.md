@@ -30,6 +30,8 @@ Note: you must be using python 3.8 or newer
 ```python
 pip install yamldb
 
+from yamldb import YamlDB
+
 db = YamlDB(filename="data.yml")
 
 db["a"] = "1"

@@ -72,4 +72,4 @@ Changelog = "https://github.com/cloudmesh/yamldb/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 where = ["src/"]
-include = ["yamldb"]
+# include = ["yamldb"]
