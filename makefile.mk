@@ -101,7 +101,7 @@ local-force: ## Install the package locally with force
 patch: clean twine ## Build the package and upload it to testpypi
 	$(call banner, "patch")
 	pip install -r requirements-dev.txt
-	cms bumpversion patch
+	bumpversion patch
 	@VERSION=$$(cat VERSION); \
 		git commit -m "bump version ${VERSION}" .; git push
 	pip install -q build
