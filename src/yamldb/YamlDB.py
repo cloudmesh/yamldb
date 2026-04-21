@@ -10,7 +10,7 @@ db.search("[?name=='Gregor']")
 
 """
 # pylint: disable=C0103,W0107,W0702
-import os
+from pathlib import Path
 
 import jmespath
 import oyaml as yaml
@@ -41,7 +41,8 @@ class YamlDB:
         self.backend = backend
         self.filename = filename
 
-        if os.path.exists(filename):
+        path = Path(filename)
+        if path.exists():
             if data is not None:
                 self.data = data
                 self.save(filename=filename)
@@ -63,15 +64,14 @@ class YamlDB:
             ValueError: If the directory cannot be created.
 
         """
-        directory = os.path.dirname(filename)
-        if directory is not None and directory != "":
-            if not os.path.isdir(directory):
-                try:
-                    os.makedirs(directory, exist_ok=True)
-                except OSError as e:
-                    raise ValueError(
-                        f"YAMLDB: could not create directory={directory}"
-                    ) from e
+        directory = Path(filename).parent
+        if directory != Path("."):
+            try:
+                directory.mkdir(parents=True, exist_ok=True)
+            except OSError as e:
+                raise ValueError(
+                    f"YAMLDB: could not create directory={directory}"
+                ) from e
 
     def print_dictionary(self, dic, indent=0):
         """
@@ -162,15 +162,14 @@ class YamlDB:
             None
 
         """
-        prefix = os.path.dirname(filename)
-        if prefix is not None and prefix != "":
-            if not os.path.exists(prefix):
-                os.makedirs(prefix)
-
         name = filename or self.filename
+        path = Path(name)
+        
+        if path.parent != Path("."):
+            path.parent.mkdir(parents=True, exist_ok=True)
 
-        if os.path.exists(name):
-            with open(name, "rb") as dbfile:
+        if path.exists():
+            with open(path, "rb") as dbfile:
                 self.data = yaml.safe_load(dbfile) or dict()
 
     def update(self, filename=None):
@@ -208,7 +207,8 @@ class YamlDB:
             None
         """
         name = filename or self.filename
-        with open(name, "w") as stream:
+        path = Path(name)
+        with open(path, "w") as stream:
             yaml.dump(self.data, stream, default_flow_style=False, indent=indent)
 
     def flush(self):
@@ -253,7 +253,7 @@ class YamlDB:
         Returns:
             int: The number of elements in the top level.
         """
-        len(self.data)
+        return len(self.data)
 
     def __setitem__(self, key, value):
         """Sets the item given at the key to value
