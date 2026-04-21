@@ -14,10 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Migrated file system operations from `os.path` to `pathlib` for better cross-platform compatibility and cleaner code.
 
 ### Added
-- Added atomic writes to prevent data corruption.
-- Added transaction support for grouped updates.
-- Added concurrency control using file locking.
-- Added comprehensive type hinting for better maintainability and IDE support.
+- Added atomic writes using temporary files to prevent data corruption during crashes.
+- Added transaction support via a context manager to allow grouped updates with automatic rollback on failure.
+- Added concurrency control using file-based locking to prevent data corruption from concurrent process access.
+- Added comprehensive Python type hinting across the `YamlDB` class for better maintainability and IDE support.
+- Added `tests/test_advanced.py` to verify atomic writes, transactions, and concurrency.
 - Added `pytest-html` to `requirements-dev.txt` to enable HTML report generation during tests.
 
 ## [1.0.4]
