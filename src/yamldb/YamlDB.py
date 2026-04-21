@@ -354,7 +354,6 @@ class YamlDB:
                     print("K", key, d)
                 del_key = keys[-1]
                 del d[del_key]
-                self._delete_keys_from_dict(self.data, keys)
             else:
                 del self.data[item]
                 return

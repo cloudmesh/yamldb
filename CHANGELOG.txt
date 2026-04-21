@@ -1,0 +1,9 @@
+CHANGELOG
+
+==========
+
+2026-04-20
+-----------
+* Fixed bug where `__len__` did not return the length of the database.
+* Migrated file system operations from `os.path` to `pathlib` for better cross-platform compatibility and cleaner code.
+* Added `pytest-html` to `requirements-dev.txt` to enable HTML report generation during tests.
