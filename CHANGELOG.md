@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated `pyproject.toml` to use dynamic versioning from `VERSION` file.
 - Updated `pyproject.toml` classifiers to include `Topic :: Database` and remove Python 3.7 support.
 
+### Fixed
+- Fixed build failure in GitHub Actions by removing unnecessary dependency on `cloudmesh-ai-common` in `tests/test_delete.py`.
+
 ## [1.0.10]
 
 ### Added
