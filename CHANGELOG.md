@@ -1,4 +1,4 @@
-# Changelog
+commit t# Changelog
 
 All notable changes to this project will be documented in this file.
 
@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- Fixed `Makefile` by removing `pyenv` dependency and adding `pip` target to resolve CI failures.
 - Fixed bug where `__len__` did not return the length of the database.
 
 ### Changed

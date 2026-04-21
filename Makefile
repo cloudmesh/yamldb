@@ -8,9 +8,8 @@ PIP          := $(PYTHON) -m pip
 PACKAGE_NAME := $(shell basename $(CURDIR))
 VERSION_FILE := VERSION
 GIT          := git
-PYENVVERSION := $(shell pyenv version-name)
 
-.PHONY: help install clean reinstall version test test-cov setup-test uninstall-all
+.PHONY: help install pip clean reinstall version test test-cov setup-test uninstall-all
 
 help:
 	@echo
@@ -18,6 +17,7 @@ help:
 	@echo
 	@echo "  version       - Display current version from $(VERSION_FILE)"
 	@echo "  install       - Install in editable mode for local development"
+	@echo "  pip           - Install dependencies and package"
 	@echo "  reinstall     - Clean and reinstall locally"
 	@echo "  clean         - Remove build artifacts, cache, and test debris"
 	@echo "  test          - Run pytest suite with HTML report"
@@ -32,7 +32,9 @@ version:
 
 # --- DEVELOPMENT & TESTING ---
 
-install:
+install: pip
+
+pip:
 	$(PIP) install -e .
 
 requirements:
