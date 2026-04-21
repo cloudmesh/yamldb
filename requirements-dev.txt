@@ -7,6 +7,7 @@ bump2version
 wheel
 twine
 pytest-cov
+pytest-html
 pip-tools
 cloudmesh-common
 

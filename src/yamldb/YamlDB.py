@@ -245,7 +245,7 @@ class YamlDB:
         Returns:
             str: The YAML string representation of the data.
         """
-        return str(self.data)
+        return yaml.dump(self.data, default_flow_style=False, indent=2)
 
     def __len__(self):
         """Return the number of elements in the top level.
@@ -416,9 +416,8 @@ class YamlDB:
             Any: The value associated with the key, or the default value if the key is not found.
         """
         try:
-            return self.data[key]
-        except KeyError:
-            self[key] = default
+            return self.__getitem__(key)
+        except (KeyError, ValueError):
             return default
 
     def search(self, query):
