@@ -94,3 +94,6 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+# Release state
+.release_state.json
