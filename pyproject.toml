@@ -8,7 +8,7 @@ requires = [
 
 [project]
 name = "yamldb"
-version = "1.0.8.dev1"
+dynamic = ["version"]
 description = "A file based database using yaml as file format"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -42,12 +42,14 @@ classifiers = [
     "Operating System :: Microsoft :: Windows :: Windows 10",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Database",
     "Topic :: Scientific/Engineering",
     "Topic :: Software Development :: Libraries",
     "Topic :: Software Development :: User Interfaces",
@@ -58,6 +60,7 @@ classifiers = [
 ]
 
 dependencies = [
+  "cloudmesh-common",
   "jmespath",
   "oyaml"
 ]
@@ -69,6 +72,9 @@ Repository = "https://github.com/cloudmesh/yamldb.git"
 Issues = "https://github.com/cloudmesh/yamldb/issues"
 Changelog = "https://github.com/cloudmesh/yamldb/blob/main/CHANGELOG.md"
 
+
+[tool.setuptools.dynamic]
+version = {file = "VERSION"}
 
 [tool.setuptools.packages.find]
 where = ["src/"]

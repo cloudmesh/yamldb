@@ -16,7 +16,7 @@ from cloudmesh.common.util import HEADING
 from cloudmesh.common.util import readfile
 from cloudmesh.common.systeminfo import os_is_windows
 from cloudmesh.common.util import path_expand
-from cloudmesh.common.util import banner
+from cloudmesh.ai.common.io import banner
 
 if os_is_windows():
     filename = "~/.cloudmesh/cloudmesh.yaml"
