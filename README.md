@@ -1,14 +1,14 @@
 # YamlDB
 
-YamlDB is a lightweight, file-based database that uses YAML for storage. It provides a simple API for managing nested configuration data with support for atomic writes, concurrency locking, and advanced querying.
+YamlDB is a file-based database that uses YAML for storage. It provides an API for managing nested configuration data with support for atomic writes, concurrency locking, and advanced querying.
 
 ## Features
 
 - **Nested Key Access**: Use dot-notation (e.g., `user.profile.name`) to get or set values.
-- **Atomic Writes**: Ensures data integrity by writing to a temporary file before replacing the original.
-- **Concurrency Locking**: Uses system-level advisory locks (`portalocker`) to prevent data corruption during concurrent access.
-- **Comment Preservation**: Powered by `ruamel.yaml`, it preserves comments and formatting in your YAML files.
-- **Write Optimization**: An `auto_flush` mechanism and `_dirty` flag reduce unnecessary disk I/O.
+- **Atomic Writes**: Writes to a temporary file before replacing the original to prevent data loss.
+- **Concurrency Locking**: Uses system-level advisory locks (`portalocker`) to prevent corruption during concurrent access.
+- **Comment Preservation**: Uses `ruamel.yaml` to preserve comments and formatting in your YAML files.
+- **Write Optimization**: An `auto_flush` mechanism and `_dirty` flag reduce disk I/O.
 - **Advanced Querying**: Integrated JMESPath support for complex searches.
 - **Type Casting**: Hybrid system for explicit casting during storage and retrieval.
 - **Transactions**: Atomic bulk updates with full rollback support.
@@ -18,20 +18,20 @@ YamlDB is a lightweight, file-based database that uses YAML for storage. It prov
 
 ### Standard Installation
 ```bash
-pip install .
+pip install yamldb
 ```
 
 ### Installation with Encryption Support
 To use the `:encrypt:` backend, you need the `cryptography` library:
 ```bash
-pip install ".[encrypt]"
+pip install "yamldb[encrypt]"
 ```
 
 ## Quick Start
 
 ### Programmatic API (Computing Infrastructure Example)
 
-YamlDB is ideal for managing infrastructure manifests, cluster configurations, and node metadata.
+Use cases include managing infrastructure manifests, cluster configurations, and node metadata.
 
 ```python
 from yamldb import YamlDB
@@ -63,7 +63,7 @@ with db.transaction():
 
 ### CLI Usage
 
-The `yamldb` CLI provides a powerful way to interact with your YAML databases directly from the terminal.
+The `yamldb` CLI allows direct interaction with YAML databases from the terminal.
 
 #### General Usage
 ```bash
@@ -105,7 +105,7 @@ yamldb stats <file>
 ## Advanced API Reference
 
 ### `items_recursive()`
-A generator that yields all leaf nodes in the database as `(dot_notation_key, value)` pairs. Useful for auditing entire infrastructure states.
+A generator that yields all leaf nodes in the database as `(dot_notation_key, value)` pairs. This allows auditing of infrastructure states.
 ```python
 for key, value in db.items_recursive():
     print(f"{key}: {value}")
@@ -113,7 +113,7 @@ for key, value in db.items_recursive():
 ```
 
 ### `find_all(value)` & `filter(predicate)`
-Quickly locate infrastructure components based on their state.
+Locate infrastructure components based on their state.
 ```python
 # Find all nodes that are in 'maintenance' mode
 maintenance_nodes = db.find_all("maintenance")
@@ -164,7 +164,7 @@ print(f"Write Efficiency: {stats['write_efficiency']}")
 ## Advanced Features
 
 ### Binary Storage
-For applications requiring high performance and smaller file sizes, use the `:binary:` backend.
+For applications requiring smaller file sizes and faster I/O, use the `:binary:` backend.
 ```python
 db = YamlDB(filename="data.bin", backend=":binary:")
 db.set("metrics.cpu", 45)
@@ -195,7 +195,7 @@ db.set("cluster.api_key", "abc-123-def-456")
 ```
 
 ### Web UI Prototype
-YamlDB comes with a lightweight Web UI for visual data management.
+YamlDB comes with a lightweight Web UI for visual data management. This is a prototype designed to demonstrate how easily YamlDB can be integrated into other frameworks (such as FastAPI).
 
 **To run the Web UI:**
 1. Install dependencies: `pip install fastapi uvicorn`
