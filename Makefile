@@ -9,7 +9,7 @@ PACKAGE_NAME := $(shell basename $(CURDIR))
 VERSION_FILE := VERSION
 GIT          := git
 
-.PHONY: help install pip clean reinstall version test test-cov setup-test uninstall-all
+.PHONY: help install pip clean reinstall version test test-cov setup-test uninstall-all check-syntax
 
 help:
 	@echo
@@ -23,6 +23,7 @@ help:
 	@echo "  test          - Run pytest suite with HTML report"
 	@echo "  test-cov      - Run pytest with coverage report"
 	@echo "  setup-test    - Install test deps"
+	@echo "  check-syntax  - Check YAML syntax for a file (usage: make check-syntax FILE=path/to/file.yaml)"
 	@echo
 
 # --- VERSION MANAGEMENT ---
@@ -31,6 +32,10 @@ version:
 	@cat $(VERSION_FILE)
 
 # --- DEVELOPMENT & TESTING ---
+
+check-syntax:
+	@if [ -z "$(FILE)" ]; then echo "Error: FILE variable is required. Usage: make check-syntax FILE=yourfile.yaml"; exit 1; fi
+	$(PYTHON) -c "from yamldb.util import print_yaml_errors; print_yaml_errors('$(FILE)')"
 
 install: pip
 

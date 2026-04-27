@@ -1,9 +1,3 @@
-###############################################################
-# pytest -v --capture=no tests/test_delete.py
-# pytest -v  tests/test_delete.py
-# pytest -v --capture=no  tests/test_delete..py::test_delete::<METHODNAME>
-###############################################################
-
 import os
 from pprint import pprint
 
@@ -11,11 +5,10 @@ import pytest
 from yamldb.YamlDB import YamlDB
 import yaml
 
-from cloudmesh.common.StopWatch import StopWatch
-from cloudmesh.common.util import HEADING
-from cloudmesh.common.util import readfile
-from cloudmesh.common.systeminfo import os_is_windows
-from cloudmesh.common.util import path_expand
+from cloudmesh.ai.common.stopwatch import StopWatch
+from cloudmesh.ai.common import HEADING, readfile
+from cloudmesh.ai.common import os_is_windows
+from cloudmesh.ai.common.io import path_expand
 
 def banner(text):
     print(f"\n--- {text} ---")

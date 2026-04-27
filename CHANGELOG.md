@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Added a YAML syntax checker in `util.py` that detects forbidden tab characters and other syntax errors, reporting the line and column numbers.
+
 ### Changed
 - Extensively rewrote `README.md` to include detailed feature descriptions, rich code examples, and a comprehensive API reference.
 - Added a Contributors section to `README.md`.

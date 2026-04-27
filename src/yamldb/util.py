@@ -1,38 +1,76 @@
-"""A small set of utility functions for file operations."""
+try:
+    import oyaml as yaml
+except ImportError:
+    import yaml
+from pathlib import Path
+from typing import List, Dict, Any, Optional
 
-
-def readfile(filename, mode="r"):
-    """Reads the content of a file.
-
+def check_yaml_syntax(filename: str) -> List[Dict[str, Any]]:
+    """
+    Checks a YAML file for syntax errors, including forbidden tab characters.
+    
     Args:
-        filename (str): The filename.
-        mode (str): The file mode. Default is 'r'.
-
+        filename (str): Path to the YAML file.
+        
     Returns:
-        str: The content of the file.
-
-    Raises:
-        ValueError: If an incorrect mode is provided.
+        List[Dict[str, Any]]: A list of errors found. Each error is a dict with 
+                              'line', 'column', 'message', and 'type'.
     """
-    if mode not in ["r", "rb"]:
-        raise ValueError(f"Incorrect mode: expected 'r' or 'rb', given {mode}")
+    errors = []
+    path = Path(filename)
+    
+    if not path.exists():
+        return [{"line": 0, "column": 0, "message": f"File {filename} not found", "type": "FileNotFound"}]
 
-    with open(filename, mode) as file:
-        content = file.read()
-    return content
+    # 1. Check for tabs manually
+    try:
+        with open(path, "r") as f:
+            for line_num, line in enumerate(f, 1):
+                if "\t" in line:
+                    col_num = line.find("\t") + 1
+                    errors.append({
+                        "line": line_num,
+                        "column": col_num,
+                        "message": "Tab characters are not allowed in YAML",
+                        "type": "TabError"
+                    })
+    except Exception as e:
+        errors.append({"line": 0, "column": 0, "message": str(e), "type": "ReadError"})
 
+    # 2. Check for other YAML syntax errors using the parser
+    try:
+        with open(path, "rb") as f:
+            yaml.safe_load(f)
+    except yaml.YAMLError as e:
+        mark = getattr(e, 'problem_mark', None)
+        if mark:
+            errors.append({
+                "line": mark.line + 1,
+                "column": mark.column + 1,
+                "message": str(e),
+                "type": "YamlSyntaxError"
+            })
+        else:
+            errors.append({
+                "line": 0,
+                "column": 0,
+                "message": str(e),
+                "type": "YamlSyntaxError"
+            })
+    except Exception as e:
+        errors.append({"line": 0, "column": 0, "message": str(e), "type": "UnknownError"})
 
-def writefile(filename, content):
+    return errors
+
+def print_yaml_errors(filename: str) -> None:
     """
-    Writes the content into the file.
-
-    Args:
-        filename (str): The filename.
-        content (str): The content to be written.
-
-    Returns:
-        None
+    Checks YAML syntax and prints errors in a readable format.
     """
-    with open(filename, "w") as outfile:
-        outfile.write(content)
-        outfile.truncate()
+    errors = check_yaml_syntax(filename)
+    if not errors:
+        print(f"No syntax errors found in {filename}")
+        return
+
+    print(f"Syntax errors found in {filename}:")
+    for err in errors:
+        print(f"Line {err['line']}, Col {err['column']} [{err['type']}]: {err['message']}")

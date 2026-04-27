@@ -1,20 +1,13 @@
-###############################################################
-# pytest -v --capture=no tests/test_issues.py
-# pytest -v  tests/test_issues.py
-# pytest -v --capture=no  tests/test_issues..py::test_issues::<METHODNAME>
-###############################################################
-
 import os
 from pprint import pprint
 
 import pytest
 from yamldb.YamlDB import YamlDB
 
-from cloudmesh.common.StopWatch import StopWatch
-from cloudmesh.common.util import HEADING
-from cloudmesh.common.util import readfile
-from cloudmesh.common.systeminfo import os_is_windows
-from cloudmesh.common.util import path_expand
+from cloudmesh.ai.common.stopwatch import StopWatch
+from cloudmesh.ai.common import HEADING, readfile
+from cloudmesh.ai.common import os_is_windows
+from cloudmesh.ai.common.io import path_expand
 
 
 @pytest.mark.incremental

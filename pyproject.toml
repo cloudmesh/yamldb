@@ -60,7 +60,7 @@ classifiers = [
 ]
 
 dependencies = [
-  "cloudmesh-common",
+  "cloudmesh-ai-common",
   "jmespath",
   "oyaml"
 ]

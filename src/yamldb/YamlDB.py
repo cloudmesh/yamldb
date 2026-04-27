@@ -20,7 +20,14 @@ from typing import Any, Dict, List, Optional, Union, Generator
 import jmespath
 import oyaml as yaml
 from collections.abc import MutableMapping
-from cloudmesh.common import dotdict
+
+class MockConsole:
+    def print(self, msg): print(msg)
+    def error(self, msg): print(f"ERROR: {msg}")
+    def banner(self, title, subtitle=""): print(f"=== {title} ===\n{subtitle}")
+    def table(self, headers, data, title=""): print(f"{title}\n{headers}\n{data}")
+
+console = MockConsole()
 
 
 class YamlDB:
@@ -54,6 +61,7 @@ class YamlDB:
         self.filename = filename
         self._in_transaction = False
         self._lock_file = Path(f"{filename}.lock")
+        self.data = {}
 
         path = Path(filename)
         if path.exists():
@@ -133,23 +141,34 @@ class YamlDB:
 
     def print_dictionary(self, dic: Dict[Any, Any], indent: int = 0) -> None:
         """
-        Prints the contents of a dictionary recursively.
-
-        Parameters:
-            dic (dict): The dictionary to be printed.
-            indent (int): The number of tabs to be used for indentation.
-
-        Returns:
-            None
+        Prints the contents of a dictionary. 
+        Uses a table for the top level and recursive printing for nested dicts.
         """
-        if len(dic) == 0:
-            print("\t" * indent + "{}")
-        for key, value in dic.items():
-            print("\t" * indent + str(key))
-            if isinstance(value, dict):
-                self.print_dictionary(value, indent + 1)
-            else:
-                print("\t" * (indent + 1) + str(type(value)))
+        if not dic:
+            console.print("{}")
+            return
+
+        if indent == 0:
+            # Add a banner for the database overview
+            console.banner("Database Overview", f"File: {self.filename}")
+
+            # Use a table for the top-level overview
+            data = [(k, v if not isinstance(v, dict) else "dict") for k, v in dic.items()]
+            console.table(["Key", "Value"], data, title="Database Contents")
+            
+            # Then print details for nested dicts
+            for k, v in dic.items():
+                if isinstance(v, dict):
+                    console.print(f"\n[bold blue]Details for {k}:[/bold blue]")
+                    self.print_dictionary(v, indent=1)
+        else:
+            # Recursive indented printing for nested structures
+            for key, value in dic.items():
+                console.print("\t" * indent + str(key))
+                if isinstance(value, dict):
+                    self.print_dictionary(value, indent + 1)
+                else:
+                    console.print("\t" * (indent + 1) + str(value))
 
     def get_keys(
         self, d: Optional[Dict[Any, Any]] = None, keys_list: Optional[List[str]] = None, parent: str = ""
@@ -212,29 +231,120 @@ class YamlDB:
         self.data.clear()
         self.flush()
 
-    def load(self, filename: Optional[str] = None) -> None:
+    def load(self, filename: Optional[str] = None, _loaded_files: Optional[set] = None) -> None:
         """Loads the data from the specified filename
 
         Args:
             filename (str): The path to the file to load the data from. If not provided, the default filename will be used.
+            _loaded_files (set, optional): Internal set to track loaded files and prevent recursion.
 
         Returns:
             None
 
         """
+        is_top_level = _loaded_files is None
+        if _loaded_files is None:
+            _loaded_files = set()
+
         name = filename or self.filename
-        path = Path(name)
+        path = Path(name).resolve()
         
+        if path in _loaded_files:
+            return
+        _loaded_files.add(path)
+
         if path.parent != Path("."):
             path.parent.mkdir(parents=True, exist_ok=True)
 
         if path.exists():
             self._acquire_lock()
             try:
+                with open(path, "r") as dbfile:
+                    lines = dbfile.readlines()
+                
+                # Handle #load directives
+                for line in lines:
+                    line = line.strip()
+                    if line.startswith("#load"):
+                        # Support both "#load path" and "#load: path"
+                        content = line[5:].strip()
+                        if content.startswith(":"):
+                            content = content[1:].strip()
+                        load_file = content
+                        # Resolve path relative to current file
+                        load_path = (path.parent / load_file).resolve()
+                        
+                        # We need a temporary YamlDB or a way to load just the data
+                        # To keep it simple, we'll use a helper to load yaml data
+                        loaded_data = self._load_yaml_file(load_path, _loaded_files)
+                        if loaded_data:
+                            if self.data is None:
+                                self.data = {}
+                            self.data.update(loaded_data)
+
+                # Load the actual file content
                 with open(path, "rb") as dbfile:
-                    self.data = yaml.safe_load(dbfile) or dict()
+                    file_data = yaml.safe_load(dbfile) or dict()
+                    if self.data is None:
+                        self.data = {}
+                    self.data.update(file_data)
             finally:
                 self._release_lock()
+        
+        if is_top_level: # Only resolve variables at the top-level call
+            self._resolve_variables()
+
+    def _load_yaml_file(self, path: Path, loaded_files: set) -> Dict[Any, Any]:
+        """Helper to load a YAML file and its #load directives without updating self.data directly."""
+        if path in loaded_files:
+            return {}
+        loaded_files.add(path)
+
+        if not path.exists():
+            return {}
+
+        try:
+            with open(path, "r") as dbfile:
+                lines = dbfile.readlines()
+            
+            data = {}
+            for line in lines:
+                line = line.strip()
+                if line.startswith("#load"):
+                    # Support both "#load path" and "#load: path"
+                    content = line[5:].strip()
+                    if content.startswith(":"):
+                        content = content[1:].strip()
+                    load_file = content
+                    load_path = (path.parent / load_file).resolve()
+                    loaded_data = self._load_yaml_file(load_path, loaded_files)
+                    data.update(loaded_data)
+            
+            with open(path, "rb") as dbfile:
+                file_data = yaml.safe_load(dbfile) or dict()
+                data.update(file_data)
+            return data
+        except Exception as e:
+            console.error(f"Error loading file {path}: {e}")
+            return {}
+
+    def _resolve_variables(self) -> None:
+        """Resolves variables in the form of {a.b} in the data."""
+        def resolve_value(val: Any) -> Any:
+            if isinstance(val, str) and val.startswith("{") and val.endswith("}"):
+                var_path = val[1:-1]
+                try:
+                    return self.__getitem__(var_path)
+                except (KeyError, ValueError):
+                    return val
+            elif isinstance(val, dict):
+                return {k: resolve_value(v) for k, v in val.items()}
+            elif isinstance(val, list):
+                return [resolve_value(i) for i in val]
+            return val
+
+        if self.data:
+            self.data = resolve_value(self.data)
 
     def update(self, filename: Optional[str] = None) -> None:
         """Inserts the data from the specified filename
@@ -255,7 +365,7 @@ class YamlDB:
                 data = yaml.safe_load(dbfile) or dict()
                 id = data["id"] or "unknown"
                 if id in ["unknown", "MISSING"]:
-                    print(f"Error: id not found for {filename}")
+                    console.error(f"id not found for {filename}")
                 d = {id: data}
                 self.data.update(d)
 
@@ -386,7 +496,7 @@ class YamlDB:
                 f"The key '{key}' could not be found in the yaml file '{self.filename}'"
             )
         except Exception as e:
-            print(e)
+            console.error(f"Error setting key {key}: {e}")
             raise ValueError("unknown error")
 
         if not self._in_transaction:
@@ -405,7 +515,6 @@ class YamlDB:
         """
         for key in keys:
             with suppress(KeyError):
-                print("DELETE", key, keys)
                 del data[key]
         for value in data.values():
             if isinstance(value, MutableMapping):
@@ -427,14 +536,13 @@ class YamlDB:
                 d = self.data
                 for key in keys[:-1]:
                     d = d[key]
-                    print("K", key, d)
                 del_key = keys[-1]
                 del d[del_key]
             else:
                 del self.data[item]
                 return
         except Exception as e:
-            print(e)
+            console.error(f"Error deleting item {item}: {e}")
             # raise ValueError("unknown error")
 
     def __delitem__(self, key: str) -> None:
@@ -476,7 +584,7 @@ class YamlDB:
                 f"The key '{item}' could not be found in the yaml file '{self.filename}'"
             )
         except Exception as e:
-            print(e)
+            console.error(f"Error retrieving item {item}: {e}")
             raise ValueError("unknown error")
         return element
 
