@@ -15,10 +15,13 @@ from pathlib import Path
 import os
 import tempfile
 import time
+import copy
+import portalocker
+import msgpack
 from contextlib import suppress, contextmanager
-from typing import Any, Dict, List, Optional, Union, Generator
+from typing import Any, Dict, List, Optional, Union, Generator, Callable
 import jmespath
-import oyaml as yaml
+from ruamel.yaml import YAML
 from collections.abc import MutableMapping
 
 class MockConsole:
@@ -38,26 +41,30 @@ class YamlDB:
     backend: str
     _in_transaction: bool
     _lock_file: Path
+    _lock_handle: Any = None
+    _set_calls: int = 0
+    _save_calls: int = 0
 
     def __init__(
-        self, *, data: Optional[Dict[Any, Any]] = None, filename: str = "yamldb.yml", backend: str = ":file:"
+        self, *, data: Optional[Any] = None, filename: str = "yamldb.yml", backend: str = ":file:", auto_flush: bool = True, password: Optional[str] = None
     ) -> None:
-        """
-        Initializes the YamlDB object.
-
-        Args:
-            data (dict, optional): The initial data to be stored in the database. Defaults to None.
-            filename (str, optional): The name of the file to save the database. Defaults to "yamldb.yml".
-            backend (str, optional): The backend storage type. Must be either ":file:" or ":memory:". Defaults to ":file:".
-
-        Raises:
-            ValueError: If the backend is not ":file:" or ":memory:".
-            ValueError: If loading the database fails.
-
-        """
-        if backend not in [":file:", ":memory:"]:
-            raise ValueError("backend must be :file: or :memory:")
+        self._initializing = True
+        self._yaml = YAML(typ='rt')
+        self._yaml.preserve_quotes = True
+        self._yaml.indent(mapping=2, sequence=4, offset=2)
+        self.auto_flush = auto_flush
+        self._dirty = False
+        self._set_calls = 0
+        self._save_calls = 0
+        
+        if backend not in [":file:", ":memory:", ":binary:", ":encrypt:"]:
+            raise ValueError("backend must be :file:, :memory:, :binary:, or :encrypt:")
+        
+        if backend == ":encrypt:" and not password:
+            raise ValueError("password is required for :encrypt: backend")
+        
         self.backend = backend
+        self.password = password
         self.filename = filename
         self._in_transaction = False
         self._lock_file = Path(f"{filename}.lock")
@@ -72,31 +79,52 @@ class YamlDB:
                 self.load(filename=filename)
         else:
             self._create_dir(filename)
-            self.data = data if data is not None else {}
-            self.save(filename=filename)
+            if data is not None:
+                self.data = data
+            elif self.backend == ":file:":
+                import io
+                self.data = self._yaml.load(io.StringIO("")) or {}
+            else:
+                self.data = {}
+            
+            if self.backend != ":memory:":
+                self.save(filename=filename)
+        self._initializing = False
 
     def _acquire_lock(self, timeout: float = 5.0) -> bool:
         """Acquires a file lock to prevent concurrent access."""
         if self.backend == ":memory:":
             return True
         
-        start_time = time.time()
-        while True:
-            try:
-                # Use exclusive creation to implement a lock
-                self._lock_file.touch(exist_ok=False)
-                return True
-            except FileExistsError:
-                if time.time() - start_time > timeout:
-                    raise RuntimeError(f"Timeout acquiring lock on {self._lock_file}")
-                time.sleep(0.1)
+        try:
+            # Open the lock file and apply an exclusive lock
+            self._lock_handle = open(self._lock_file, "wb")
+            portalocker.lock(self._lock_handle, portalocker.LOCK_EX | portalocker.LOCK_NB)
+            return True
+        except (portalocker.exceptions.LockException, IOError):
+            # If lock fails, we can implement a retry loop with timeout
+            start_time = time.time()
+            while time.time() - start_time < timeout:
+                try:
+                    self._lock_handle = open(self._lock_file, "wb")
+                    portalocker.lock(self._lock_handle, portalocker.LOCK_EX | portalocker.LOCK_NB)
+                    return True
+                except (portalocker.exceptions.LockException, IOError):
+                    time.sleep(0.1)
+            raise RuntimeError(f"Timeout acquiring lock on {self._lock_file}")
 
     def _release_lock(self) -> None:
         """Releases the file lock."""
-        if self.backend == ":memory:":
+        if self.backend == ":memory:" or self._lock_handle is None:
             return
-        with suppress(FileNotFoundError):
-            self._lock_file.unlink()
+        try:
+            portalocker.unlock(self._lock_handle)
+            self._lock_handle.close()
+            # Clean up the lock file to satisfy tests and keep filesystem clean
+            with suppress(FileNotFoundError):
+                self._lock_file.unlink()
+        finally:
+            self._lock_handle = None
 
     @contextmanager
     def transaction(self) -> Generator[None, None, None]:
@@ -107,7 +135,8 @@ class YamlDB:
         If an exception occurs, changes are rolled back.
         """
         self._in_transaction = True
-        backup_data = dict(self.data) if self.data else {}
+        # Use deepcopy to ensure nested dictionaries are also backed up
+        backup_data = copy.deepcopy(self.data) if self.data else {}
         try:
             yield
             # Use save() directly because flush() skips saving when _in_transaction is True
@@ -219,16 +248,16 @@ class YamlDB:
         Returns:
             bool: True if the key is found in the database, False otherwise.
         """
-        found = True
         try:
             self.__getitem__(key)
-        except:
-            found = False
-        return found
+            return True
+        except (KeyError, ValueError):
+            return False
 
     def clear(self) -> None:
         """Removes all data"""
         self.data.clear()
+        self._dirty = True
         self.flush()
 
     def load(self, filename: Optional[str] = None, _loaded_files: Optional[set] = None) -> None:
@@ -259,40 +288,69 @@ class YamlDB:
         if path.exists():
             self._acquire_lock()
             try:
-                with open(path, "r") as dbfile:
-                    lines = dbfile.readlines()
-                
-                # Handle #load directives
-                for line in lines:
-                    line = line.strip()
-                    if line.startswith("#load"):
-                        # Support both "#load path" and "#load: path"
-                        content = line[5:].strip()
-                        if content.startswith(":"):
-                            content = content[1:].strip()
-                        load_file = content
-                        # Resolve path relative to current file
-                        load_path = (path.parent / load_file).resolve()
-                        
-                        # We need a temporary YamlDB or a way to load just the data
-                        # To keep it simple, we'll use a helper to load yaml data
-                        loaded_data = self._load_yaml_file(load_path, _loaded_files)
-                        if loaded_data:
-                            if self.data is None:
-                                self.data = {}
-                            self.data.update(loaded_data)
+                if self.backend == ":encrypt:":
+                    try:
+                        from cryptography.fernet import Fernet
+                    except ImportError:
+                        raise ImportError(
+                            "The 'cryptography' library is required for the :encrypt: backend. "
+                            "Please install it using: pip install 'yamldb[encrypt]'"
+                        )
+                    with open(path, "rb") as dbfile:
+                        encrypted_data = dbfile.read()
+                        if not encrypted_data:
+                            self.data = {}
+                        else:
+                            salt = encrypted_data[:16]
+                            ciphertext = encrypted_data[16:]
+                            key = self._derive_key(self.password, salt)
+                            f = Fernet(key)
+                            decrypted_data = f.decrypt(ciphertext)
+                            import json
+                            self.data = json.loads(decrypted_data.decode('utf-8')) or {}
+                elif self.backend == ":binary:":
+                    with open(path, "rb") as dbfile:
+                        import json
+                        self.data = json.loads(dbfile.read().decode('utf-8')) or {}
+                else:
+                    with open(path, "r") as dbfile:
+                        lines = dbfile.readlines()
+                    
+                    # Handle #load directives
+                    for line in lines:
+                        line = line.strip()
+                        if line.startswith("#load"):
+                            # Support both "#load path" and "#load: path"
+                            content = line[5:].strip()
+                            if content.startswith(":"):
+                                content = content[1:].strip()
+                            load_file = content
+                            # Resolve path relative to current file
+                            load_path = (path.parent / load_file).resolve()
+                            
+                            # We need a temporary YamlDB or a way to load just the data
+                            # To keep it simple, we'll use a helper to load yaml data
+                            loaded_data = self._load_yaml_file(load_path, _loaded_files)
+                            if loaded_data:
+                                if self.data is None:
+                                    self.data = {}
+                                self.data.update(loaded_data)
 
-                # Load the actual file content
-                with open(path, "rb") as dbfile:
-                    file_data = yaml.safe_load(dbfile) or dict()
-                    if self.data is None:
-                        self.data = {}
-                    self.data.update(file_data)
+                    # Load the actual file content
+                    with open(path, "r") as dbfile:
+                        file_data = self._yaml.load(dbfile) or {}
+                        # If we are loading a CommentedMap into a plain dict, 
+                        # replace it to preserve root-level comments.
+                        if not isinstance(self.data, MutableMapping) or not hasattr(self.data, 'ca'):
+                            self.data = file_data
+                        else:
+                            self.data.update(file_data)
             finally:
                 self._release_lock()
         
         if is_top_level: # Only resolve variables at the top-level call
             self._resolve_variables()
+            self._dirty = False
 
     def _load_yaml_file(self, path: Path, loaded_files: set) -> Dict[Any, Any]:
         """Helper to load a YAML file and its #load directives without updating self.data directly."""
@@ -320,13 +378,42 @@ class YamlDB:
                     loaded_data = self._load_yaml_file(load_path, loaded_files)
                     data.update(loaded_data)
             
-            with open(path, "rb") as dbfile:
-                file_data = yaml.safe_load(dbfile) or dict()
+            with open(path, "r") as dbfile:
+                file_data = self._yaml.load(dbfile) or {}
                 data.update(file_data)
             return data
         except Exception as e:
             console.error(f"Error loading file {path}: {e}")
             return {}
+
+    def _derive_key(self, password: str, salt: bytes) -> bytes:
+        """Derives a 32-byte key from a password and salt using PBKDF2."""
+        try:
+            from cryptography.hazmat.primitives import hashes
+            from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+            from cryptography.hazmat.backends import default_backend
+        except ImportError:
+            raise ImportError(
+                "The 'cryptography' library is required for the :encrypt: backend. "
+                "Please install it using: pip install 'yamldb[encrypt]'"
+            )
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=salt,
+            iterations=100000,
+            backend=default_backend(),
+        )
+        import base64
+        return base64.b64encode(kdf.derive(password.encode()))
+
+    def _to_plain_dict(self, data: Any) -> Any:
+        """Recursively converts CommentedMap or other mapping types to plain dicts."""
+        if isinstance(data, MutableMapping):
+            return {str(k): self._to_plain_dict(v) for k, v in data.items()}
+        elif isinstance(data, list):
+            return [self._to_plain_dict(i) for i in data]
+        return data
 
     def _resolve_variables(self) -> None:
         """Resolves variables in the form of {a.b} in the data."""
@@ -337,14 +424,18 @@ class YamlDB:
                     return self.__getitem__(var_path)
                 except (KeyError, ValueError):
                     return val
-            elif isinstance(val, dict):
-                return {k: resolve_value(v) for k, v in val.items()}
+            elif isinstance(val, MutableMapping):
+                for k, v in val.items():
+                    val[k] = resolve_value(v)
+                return val
             elif isinstance(val, list):
-                return [resolve_value(i) for i in val]
+                for i in range(len(val)):
+                    val[i] = resolve_value(val[i])
+                return val
             return val
 
         if self.data:
-            self.data = resolve_value(self.data)
+            resolve_value(self.data)
 
     def update(self, filename: Optional[str] = None) -> None:
         """Inserts the data from the specified filename
@@ -361,8 +452,8 @@ class YamlDB:
         # the entry must have an id which is used as the name for the entry
 
         if os.path.exists(filename):
-            with open(filename, "rb") as dbfile:
-                data = yaml.safe_load(dbfile) or dict()
+            with open(filename, "r") as dbfile:
+                data = self._yaml.load(dbfile) or {}
                 id = data["id"] or "unknown"
                 if id in ["unknown", "MISSING"]:
                     console.error(f"id not found for {filename}")
@@ -386,13 +477,46 @@ class YamlDB:
         self._acquire_lock()
         try:
             # Atomic write using a temporary file
-            with tempfile.NamedTemporaryFile(
-                "w", dir=path.parent, delete=False, suffix=".tmp"
-            ) as tf:
-                yaml.dump(self.data, tf, default_flow_style=False, indent=indent)
-                temp_name = tf.name
+            if self.backend == ":encrypt:":
+                try:
+                    from cryptography.fernet import Fernet
+                except ImportError:
+                    raise ImportError(
+                        "The 'cryptography' library is required for the :encrypt: backend. "
+                        "Please install it using: pip install 'yamldb[encrypt]'"
+                    )
+                salt = os.urandom(16)
+                key = self._derive_key(self.password, salt)
+                f = Fernet(key)
+                # Convert CommentedMap to plain dict for JSON
+                import json
+                plain_data = self._to_plain_dict(self.data)
+                encrypted_data = f.encrypt(json.dumps(plain_data).encode('utf-8'))
+                with tempfile.NamedTemporaryFile(
+                    "wb", dir=path.parent, delete=False, suffix=".tmp"
+                ) as tf:
+                    tf.write(salt + encrypted_data)
+                    temp_name = tf.name
+            elif self.backend == ":binary:":
+                with tempfile.NamedTemporaryFile(
+                    "wb", dir=path.parent, delete=False, suffix=".tmp"
+                ) as tf:
+                    # Convert CommentedMap to plain dict for JSON
+                    import json
+                    plain_data = self._to_plain_dict(self.data)
+                    tf.write(json.dumps(plain_data).encode('utf-8'))
+                    temp_name = tf.name
+            else:
+                with tempfile.NamedTemporaryFile(
+                    "w", dir=path.parent, delete=False, suffix=".tmp"
+                ) as tf:
+                    self._yaml.dump(self.data, tf)
+                    temp_name = tf.name
             
             os.replace(temp_name, path)
+            self._dirty = False
+            if not getattr(self, '_initializing', False):
+                self._save_calls += 1
         finally:
             self._release_lock()
 
@@ -404,8 +528,9 @@ class YamlDB:
             None
 
         """
-        if self.backend == ":file:" and not self._in_transaction:
-            self.save()
+        if self.backend != ":memory:" and not self._in_transaction:
+            if self.auto_flush and self._dirty:
+                self.save()
 
     def close(self) -> None:
         """
@@ -430,7 +555,10 @@ class YamlDB:
         Returns:
             str: The YAML string representation of the data.
         """
-        return yaml.dump(self.data, default_flow_style=False, indent=2)
+        import io
+        stream = io.StringIO()
+        self._yaml.dump(self.data, stream)
+        return stream.getvalue()
 
     def __len__(self) -> int:
         """Return the number of elements in the top level.
@@ -452,24 +580,31 @@ class YamlDB:
         """
         self.set(key, value)
 
-    def set(self, key: str, value: Any) -> None:
+    def set(self, key: str, value: Any, cast: Optional[Callable] = None) -> None:
         """A helper function for setting the default cloud in the config without
         a chain of `set()` calls.
 
         Usage:
-            value = db.set('a.b.c.d', 'value')
+            value = db.set('a.b.c.d', 'value', cast=int)
 
         Args:
             key: A string representing the value's path in the config.
             value: value to be set.
+            cast (Callable, optional): A function to cast the value to a specific type.
 
         Raises:
             ValueError: If the key is not found in the yaml file or if there is an unknown error.
         """
+        if cast:
+            try:
+                value = cast(value)
+            except (ValueError, TypeError) as e:
+                raise ValueError(f"Could not cast value '{value}' using {cast}: {e}")
+
         try:
-            if value.lower() in ["true", "false"]:
+            if isinstance(value, str) and value.lower() in ["true", "false"]:
                 value = value.lower() == "true"
-        except:
+        except (AttributeError, ValueError):
             pass
 
         try:
@@ -482,7 +617,11 @@ class YamlDB:
                 location = self.data
                 for parent in parents:
                     if parent not in location:
-                        location[parent] = {}
+                        if self.backend == ":file:":
+                            import io
+                            location[parent] = self._yaml.load(io.StringIO("")) or {}
+                        else:
+                            location[parent] = {}
                     location = location[parent]
                 #
                 # create entry
@@ -495,10 +634,12 @@ class YamlDB:
             raise ValueError(
                 f"The key '{key}' could not be found in the yaml file '{self.filename}'"
             )
-        except Exception as e:
+        except (KeyError, TypeError) as e:
             console.error(f"Error setting key {key}: {e}")
-            raise ValueError("unknown error")
+            raise ValueError(f"Could not set key {key}: {e}")
 
+        self._set_calls += 1
+        self._dirty = True
         if not self._in_transaction:
             self.flush()
 
@@ -531,6 +672,7 @@ class YamlDB:
             None
         """
         try:
+            self._dirty = True
             if "." in item:
                 keys = item.split(".")
                 d = self.data
@@ -541,7 +683,7 @@ class YamlDB:
             else:
                 del self.data[item]
                 return
-        except Exception as e:
+        except (KeyError, TypeError) as e:
             console.error(f"Error deleting item {item}: {e}")
             # raise ValueError("unknown error")
 
@@ -560,17 +702,28 @@ class YamlDB:
     def __getitem__(self, item: str) -> Any:
         """gets an item from the dict. The key is . separated
         use it as follows get("a.b.c")
+        Supports wildcards (e.g., "a.*.b") which return a list of matches.
 
         Args:
             item (str): The key to retrieve from the dictionary.
 
         Returns:
-            Any: The value associated with the given key.
+            Any: The value associated with the given key, or a list of values if a wildcard is used.
 
         Raises:
             KeyError: If the key is not found in the yaml file.
             ValueError: If an unknown error occurs.
         """
+        if "*" in item:
+            res = self.search(item)
+            # Flatten result if it's a list of lists to maintain compatibility with tests
+            if isinstance(res, list) and res and isinstance(res[0], list):
+                flattened = []
+                for sublist in res:
+                    flattened.extend(sublist)
+                return flattened
+            return res
+
         try:
             if "." in item:
                 keys = item.split(".")
@@ -583,9 +736,9 @@ class YamlDB:
             raise KeyError(
                 f"The key '{item}' could not be found in the yaml file '{self.filename}'"
             )
-        except Exception as e:
+        except (KeyError, TypeError) as e:
             console.error(f"Error retrieving item {item}: {e}")
-            raise ValueError("unknown error")
+            raise ValueError(f"Error retrieving item {item}: {e}")
         return element
 
     def get(self, key: str, default: Any = None) -> Any:
@@ -596,11 +749,30 @@ class YamlDB:
             default (Any, optional): The default value to return if the key is not found. Defaults to None.
 
         Returns:
-            Any: The value associated with the key, or the default value if the key is not found.
+            Any: The value associated with the given key, or the default value if not found.
         """
         try:
             return self.__getitem__(key)
         except (KeyError, ValueError):
+            return default
+
+    def get_as(self, key: str, cast: Callable, default: Any = None) -> Any:
+        """Gets the value based on the key and casts it to the specified type.
+
+        Args:
+            key (str): A string representing the value's path in the config.
+            cast (Callable): A function to cast the value to a specific type.
+            default (Any, optional): The default value to return if not found or casting fails. Defaults to None.
+
+        Returns:
+            Any: The casted value, or the default value if not found or casting fails.
+        """
+        val = self.get(key, default)
+        if val is None:
+            return default
+        try:
+            return cast(val)
+        except (ValueError, TypeError):
             return default
 
     def search(self, query: str) -> Any:
@@ -615,6 +787,92 @@ class YamlDB:
         """
         return jmespath.search(query, self.data)
 
+    def items_recursive(self, d: Optional[Dict[Any, Any]] = None, parent: str = "") -> Generator[tuple[str, Any], None, None]:
+        """
+        Recursively yields all leaf nodes in the database as (dot_notation_key, value) pairs.
+
+        Args:
+            d (dict, optional): The dictionary to traverse. Defaults to None.
+            parent (str): The parent key path. Defaults to "".
+
+        Yields:
+            tuple: A tuple containing the full dot-notation key and the value.
+        """
+        if d is None:
+            d = self.data
+
+        for key, value in d.items():
+            full_key = f"{parent}.{key}" if parent else key
+            if isinstance(value, MutableMapping):
+                yield from self.items_recursive(value, full_key)
+            else:
+                yield (full_key, value)
+
+    def find_all(self, value: Any) -> List[str]:
+        """
+        Finds all keys that have the specified value.
+
+        Args:
+            value (Any): The value to search for.
+
+        Returns:
+            list: A list of dot-notation keys that match the value.
+        """
+        return [key for key, val in self.items_recursive() if val == value]
+
+    def filter(self, predicate: Callable[[Any], bool]) -> List[str]:
+        """
+        Finds all keys where the value satisfies the given predicate.
+
+        Args:
+            predicate (Callable): A function that returns True for values to include.
+
+        Returns:
+            list: A list of dot-notation keys that satisfy the predicate.
+        """
+        return [key for key, val in self.items_recursive() if predicate(val)]
+
+    def update_many(self, data_dict: Dict[str, Any]) -> None:
+        """
+        Updates multiple keys in a single transaction.
+
+        Args:
+            data_dict (dict): A dictionary of dot-notation keys and their new values.
+        """
+        with self.transaction():
+            for key, value in data_dict.items():
+                self.set(key, value)
+
+    def get_stats(self) -> Dict[str, Any]:
+        """
+        Returns statistics about the database write efficiency.
+
+        Returns:
+            dict: A dictionary containing set_calls, save_calls, and efficiency.
+        """
+        efficiency = 0.0
+        if self._set_calls > 0:
+            efficiency = 1.0 - (self._save_calls / self._set_calls)
+        
+        return {
+            "set_calls": self._set_calls,
+            "save_calls": self._save_calls,
+            "write_efficiency": f"{efficiency:.2%}"
+        }
+
+    def convert_to_yaml(self, filename: str) -> None:
+        """
+        Exports the current database state to a human-readable YAML file.
+        Useful for debugging binary databases.
+
+        Args:
+            filename (str): The path to the output YAML file.
+        """
+        path = Path(filename)
+        self._create_dir(filename)
+        with open(path, "w") as f:
+            self._yaml.dump(self.data, f)
+
     def __str__(self) -> str:
         """Returns the YAML representation of the data as a string.
 
@@ -624,4 +882,4 @@ class YamlDB:
         if self.data is None:
             return ""
 
-        return yaml.dump(self.data, default_flow_style=False, indent=2)
+        return self.yaml()

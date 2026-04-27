@@ -1,149 +1,203 @@
 # YamlDB
 
-[![GitHub Repo](https://img.shields.io/badge/github-repo-green.svg)](https://github.com/cloudmesh/yamldb)
-[![PyPI Versions](https://img.shields.io/pypi/pyversions/yamldb.svg)](https://pypi.org/project/yamldb)
-[![PyPI Version](https://img.shields.io/pypi/v/yamldb.svg)](https://pypi.org/project/yamldb/)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![GitHub issues](https://img.shields.io/github/issues/cloudmesh/yamldb.svg)](https://github.com/cloudmesh/yamldb/issues)
-[![Contributors](https://img.shields.io/github/contributors/cloudmesh/yamldb.svg)](https://github.com/cloudmesh/yamldb/graphs/contributors)
+YamlDB is a lightweight, file-based database that uses YAML for storage. It provides a simple API for managing nested configuration data with support for atomic writes, concurrency locking, and advanced querying.
 
-[![Linux](https://img.shields.io/badge/OS-Linux-orange.svg)](https://www.linux.org/)
-[![macOS](https://img.shields.io/badge/OS-macOS-lightgrey.svg)](https://www.apple.com/macos)
-[![Windows](https://img.shields.io/badge/OS-Windows-blue.svg)](https://www.microsoft.com/windows)
+## Features
 
-YamlDB is a lightweight, easy-to-use file-based database that uses YAML as its storage format. It allows you to treat a YAML file as a dictionary in your Python application, providing a balance between the simplicity of a flat file and the functionality of a database.
-
-## Key Features
-
-- **Human Readable**: Data is stored in standard YAML, making it easy to inspect and edit manually.
-- **Dot Notation**: Access and set nested values using dot-separated keys (e.g., `db["user.profile.name"]`).
-- **Powerful Querying**: Integrated with [JMESPath](https://jmespath.org/) for complex searching and filtering.
-- **Data Integrity**:
-    - **Atomic Writes**: Uses temporary files to ensure that crashes during saving don't corrupt your database.
-    - **Transactions**: Supports atomic transactions via a context manager; changes are rolled back if an error occurs.
-    - **Concurrency Control**: Implements file-based locking to prevent data corruption when multiple processes access the same file.
-- **Flexible Backends**: Supports both persistent file storage (`:file:`) and volatile in-memory storage (`:memory:`).
+- **Nested Key Access**: Use dot-notation (e.g., `user.profile.name`) to get or set values.
+- **Atomic Writes**: Ensures data integrity by writing to a temporary file before replacing the original.
+- **Concurrency Locking**: Uses system-level advisory locks (`portalocker`) to prevent data corruption during concurrent access.
+- **Comment Preservation**: Powered by `ruamel.yaml`, it preserves comments and formatting in your YAML files.
+- **Write Optimization**: An `auto_flush` mechanism and `_dirty` flag reduce unnecessary disk I/O.
+- **Advanced Querying**: Integrated JMESPath support for complex searches.
+- **Type Casting**: Hybrid system for explicit casting during storage and retrieval.
+- **Transactions**: Atomic bulk updates with full rollback support.
+- **CLI Tool**: Manage your YAML databases directly from the terminal.
 
 ## Installation
 
+### Standard Installation
 ```bash
-pip install yamldb
+pip install .
 ```
 
-*Note: Requires Python 3.8 or newer.*
+### Installation with Encryption Support
+To use the `:encrypt:` backend, you need the `cryptography` library:
+```bash
+pip install ".[encrypt]"
+```
 
 ## Quick Start
 
-### Basic CRUD Operations
+### Programmatic API (Computing Infrastructure Example)
+
+YamlDB is ideal for managing infrastructure manifests, cluster configurations, and node metadata.
 
 ```python
 from yamldb import YamlDB
 
-# Initialize the database
-db = YamlDB(filename="data.yml")
+# Initialize DB for cluster configuration
+db = YamlDB(filename="cluster_config.yml", auto_flush=True)
 
-# Set values (creates parents automatically)
-db["user.name"] = "Gregor"
-db["user.age"] = 30
-db["settings.theme"] = "dark"
+# Define infrastructure components using dot-notation
+db.set("cluster.name", "hpc-cluster-01")
+db.set("cluster.nodes.node01.gpu_count", "8", cast=int)
+db.set("cluster.nodes.node01.status", "online")
+db.set("cluster.nodes.node02.gpu_count", "4", cast=int)
+db.set("cluster.nodes.node02.status", "maintenance")
 
-# Get values with an optional default
-name = db.get("user.name") # "Gregor"
-city = db.get("user.city", default="Unknown") # "Unknown"
+# Retrieve infrastructure details
+gpu_count = db.get_as("cluster.nodes.node01.gpu_count", int)
+status = db.get("cluster.nodes.node01.status")
 
-# Delete a key
-db.delete("settings.theme")
+# Advanced Search (JMESPath)
+# Find all nodes that are currently 'online'
+online_nodes = db.search("cluster.nodes.[?status=='online']")
 
-# Save changes to disk
-db.save()
+# Bulk Updates in a Transaction (e.g., updating cluster version)
+with db.transaction():
+    db.set("cluster.version", "2.4.1")
+    db.set("cluster.last_updated", "2026-04-27")
+    # If an exception occurs, the version won't be partially updated
 ```
 
-### Advanced Searching with JMESPath
+### CLI Usage
 
-YamlDB uses JMESPath for querying, allowing you to filter and transform your data.
+The `yamldb` CLI provides a powerful way to interact with your YAML databases directly from the terminal.
+
+#### General Usage
+```bash
+yamldb [OPTIONS] COMMAND [ARGS]...
+```
+
+#### Commands
+
+**`get`**: Retrieve a value using dot-notation.
+```bash
+yamldb get <file> <key>
+# Example: yamldb get config.yml user.profile.name
+```
+
+**`set`**: Set a value. Automatically creates parent keys if they don't exist.
+```bash
+yamldb set <file> <key> <value>
+# Example: yamldb set config.yml app.version 1.2.0
+```
+
+**`delete`**: Remove a key from the database.
+```bash
+yamldb delete <file> <key>
+# Example: yamldb delete config.yml user.old_setting
+```
+
+**`search`**: Query the database using JMESPath expressions.
+```bash
+yamldb search <file> <query>
+# Example: yamldb search config.yml "[?status=='active']"
+```
+
+**`stats`**: Display write efficiency and I/O statistics.
+```bash
+yamldb stats <file>
+# Example: yamldb stats config.yml
+```
+
+## Advanced API Reference
+
+### `items_recursive()`
+A generator that yields all leaf nodes in the database as `(dot_notation_key, value)` pairs. Useful for auditing entire infrastructure states.
+```python
+for key, value in db.items_recursive():
+    print(f"{key}: {value}")
+# Output: cluster.nodes.node01.gpu_count: 8 ...
+```
+
+### `find_all(value)` & `filter(predicate)`
+Quickly locate infrastructure components based on their state.
+```python
+# Find all nodes that are in 'maintenance' mode
+maintenance_nodes = db.find_all("maintenance")
+
+# Find all nodes with more than 4 GPUs
+high_capacity_nodes = db.filter(lambda v: isinstance(v, int) and v > 4)
+```
+
+### `update_many(data_dict)`
+Perform multiple infrastructure updates atomically.
+```python
+db.update_many({
+    "cluster.nodes.node01.status": "offline",
+    "cluster.nodes.node01.last_reboot": "2026-04-27",
+    "cluster.global.maintenance_mode": True
+})
+```
+
+### Wildcard Retrieval
+You can use the `*` wildcard in `get()` or via bracket access to retrieve multiple values across the database. This is powered by JMESPath under the hood.
 
 ```python
-# Sample data: {"users": [{"name": "Gregor", "age": 30}, {"name": "Alice", "age": 25}]}
-db["users"] = [{"name": "Gregor", "age": 30}, {"name": "Alice", "age": 25}]
+# Get the status of ALL nodes in the cluster
+# Returns a list: ['online', 'maintenance', 'online']
+statuses = db.get("cluster.nodes.*.status")
 
-# Find users older than 28
-results = db.search("[?age > `28`]")
-# [{'name': 'Gregor', 'age': 30}]
-
-# Get only the names of all users
-names = db.search("users[].name")
-# ['Gregor', 'Alice']
+# Get the GPU count for all nodes
+# Returns a list: [8, 4, 16]
+gpu_counts = db["cluster.nodes.*.gpu_count"]
 ```
 
-### Transactions
-
-Use the `transaction()` context manager to ensure a group of updates are applied atomically.
-
+### Write Efficiency (`get_stats`)
+Track how many disk writes were avoided thanks to the `_dirty` flag.
 ```python
-try:
-    with db.transaction():
-        db["account.balance"] = 100
-        db["account.status"] = "active"
-        # If an exception occurs here, both changes are rolled back
-        raise RuntimeError("Something went wrong!")
-except RuntimeError:
-    print("Transaction rolled back!")
-
-# Balance remains unchanged if it was previously different
+stats = db.get_stats()
+print(f"Write Efficiency: {stats['write_efficiency']}")
 ```
 
-### Concurrency and Locking
+## Configuration
 
-YamlDB automatically handles file locking to prevent concurrent processes from corrupting the data. If a lock is held by another process, YamlDB will wait for a timeout period before raising a `RuntimeError`.
-
-## API Reference
-
-### `YamlDB(filename="yamldb.yml", backend=":file:", data=None)`
 - `filename`: Path to the YAML file.
-- `backend`: Either `":file:"` (default) or `":memory:"`.
-- `data`: Optional initial dictionary to populate the DB.
+- `backend`: 
+    - `:file:` (default): Standard human-readable YAML storage.
+    - `:memory:`: In-memory storage (no disk I/O).
+    - `:binary:`: High-performance binary storage using `msgpack`.
+- `auto_flush`: If `True` (default), changes are written to disk immediately unless inside a transaction.
 
-### Core Methods
-- `get(key, default=None)`: Retrieves a value using dot notation.
-- `set(key, value)`: Sets a value using dot notation. Also supports `db[key] = value`.
-- `delete(key)`: Removes a key using dot notation.
-- `save(filename=None)`: Atomically writes the current state to disk.
-- `load(filename=None)`: Reloads the data from the file.
-- `search(query)`: Executes a JMESPath query against the data.
-- `transaction()`: Context manager for atomic updates.
-- `keys()`: Returns a list of all keys in the database.
-- `clear()`: Removes all data from the database.
-- `dict()`: Returns the internal data as a standard Python dictionary.
-- `yaml()`: Returns the data as a YAML string.
+## Advanced Features
 
-## Development and Tests
+### Binary Storage
+For applications requiring high performance and smaller file sizes, use the `:binary:` backend.
+```python
+db = YamlDB(filename="data.bin", backend=":binary:")
+db.set("metrics.cpu", 45)
 
-The best way to contribute is with issues and pull requests.
-
-```bash
-git clone https://github.com/cloudmesh/yamldb.git
-cd yamldb
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
-pip install -e .
+# Export binary data to human-readable YAML for debugging
+db.convert_to_yaml("debug_export.yml")
 ```
 
-Run tests with:
-```bash
-pytest -v tests/
+### Secure Storage (Encryption)
+For sensitive data, use the `:encrypt:` backend. This encrypts the **entire database file** (including keys and structure) using AES-128 symmetric encryption.
+
+```python
+# Initialize an encrypted database
+db = YamlDB(
+    filename="secrets.enc", 
+    backend=":encrypt:", 
+    password="your-strong-password"
+)
+
+# Use it exactly like a normal YamlDB
+db.set("cluster.admin_password", "super-secret-123")
+db.set("cluster.api_key", "abc-123-def-456")
+
+# The file 'secrets.enc' is now a binary blob that is unreadable 
+# without the correct password.
 ```
 
-## Alternatives
+### Web UI Prototype
+YamlDB comes with a lightweight Web UI for visual data management.
 
-- [jmespath](https://jmespath.org/): The query language used by YamlDB.
-- [TinyDB](https://tinydb.readthedocs.io/): Another lightweight document database.
-- [nosqlite](https://github.com/shaunduncan/nosqlite): A NoSQL wrapper for SQLite.
-- [MongoDB](https://www.mongodb.com/): A full-featured document database (YamlDB is a simpler alternative for small-scale needs).
+**To run the Web UI:**
+1. Install dependencies: `pip install fastapi uvicorn`
+2. Run the server: `python yamldb/run_webui.py`
+3. Open your browser to `http://localhost:8000`
 
-## Contributors
-
-Special thanks to all the contributors who have helped improve YamlDB. You can see the full list of contributors on [GitHub](https://github.com/cloudmesh/yamldb/graphs/contributors).
-
-## Acknowledgments
-
-Continued work was in part funded by the NSF CyberTraining: CIC: CyberTraining for Students and Technologies from Generation Z with the award numbers 1829704 and 2200409.
+The Web UI allows you to browse the database tree, set/delete values via dot-notation, and monitor write efficiency in real-time.

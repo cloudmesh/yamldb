@@ -62,8 +62,16 @@ classifiers = [
 dependencies = [
   "cloudmesh-ai-common",
   "jmespath",
-  "oyaml"
+  "ruamel.yaml",
+  "portalocker",
+  "click",
+  "msgpack",
+  "fastapi",
+  "uvicorn"
 ]
+
+[project.optional-dependencies]
+encrypt = ["cryptography"]
 
 [project.urls]
 Homepage = "https://github.com/cloudmesh/yamldb"

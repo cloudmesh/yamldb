@@ -1,3 +1,8 @@
 jmespath
-oyaml
+ruamel.yaml
+portalocker
 cloudmesh-common
+click
+msgpack
+fastapi
+uvicorn
