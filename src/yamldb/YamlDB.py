@@ -23,6 +23,7 @@ from typing import Any, Dict, List, Optional, Union, Generator, Callable
 import jmespath
 from ruamel.yaml import YAML
 from collections.abc import MutableMapping
+from .backends import FileBackend, BinaryBackend, EncryptedBackend
 
 class MockConsole:
     def print(self, msg): print(msg)
@@ -68,6 +69,17 @@ class YamlDB:
         self.filename = filename
         self._in_transaction = False
         self._lock_file = Path(f"{filename}.lock")
+        
+        # Initialize Backend Strategy
+        if backend == ":file:":
+            self._backend = FileBackend()
+        elif backend == ":binary:":
+            self._backend = BinaryBackend()
+        elif backend == ":encrypt:":
+            self._backend = EncryptedBackend(password)
+        else: # :memory:
+            self._backend = None
+
         self.data = {}
 
         path = Path(filename)
@@ -81,13 +93,10 @@ class YamlDB:
             self._create_dir(filename)
             if data is not None:
                 self.data = data
-            elif self.backend == ":file:":
-                import io
-                self.data = self._yaml.load(io.StringIO("")) or {}
             else:
                 self.data = {}
             
-            if self.backend != ":memory:":
+            if self._backend:
                 self.save(filename=filename)
         self._initializing = False
 
@@ -261,16 +270,7 @@ class YamlDB:
         self.flush()
 
     def load(self, filename: Optional[str] = None, _loaded_files: Optional[set] = None) -> None:
-        """Loads the data from the specified filename
-
-        Args:
-            filename (str): The path to the file to load the data from. If not provided, the default filename will be used.
-            _loaded_files (set, optional): Internal set to track loaded files and prevent recursion.
-
-        Returns:
-            None
-
-        """
+        """Loads the data from the specified filename."""
         is_top_level = _loaded_files is None
         if _loaded_files is None:
             _loaded_files = set()
@@ -288,67 +288,30 @@ class YamlDB:
         if path.exists():
             self._acquire_lock()
             try:
-                if self.backend == ":encrypt:":
-                    try:
-                        from cryptography.fernet import Fernet
-                    except ImportError:
-                        raise ImportError(
-                            "The 'cryptography' library is required for the :encrypt: backend. "
-                            "Please install it using: pip install 'yamldb[encrypt]'"
-                        )
-                    with open(path, "rb") as dbfile:
-                        encrypted_data = dbfile.read()
-                        if not encrypted_data:
-                            self.data = {}
-                        else:
-                            salt = encrypted_data[:16]
-                            ciphertext = encrypted_data[16:]
-                            key = self._derive_key(self.password, salt)
-                            f = Fernet(key)
-                            decrypted_data = f.decrypt(ciphertext)
-                            import json
-                            self.data = json.loads(decrypted_data.decode('utf-8')) or {}
-                elif self.backend == ":binary:":
-                    with open(path, "rb") as dbfile:
-                        import json
-                        self.data = json.loads(dbfile.read().decode('utf-8')) or {}
+                if self._backend:
+                    self.data = self._backend.load(str(path))
                 else:
+                    self.data = {}
+                
+                # Handle #load directives for FileBackend specifically
+                if self.backend == ":file:":
                     with open(path, "r") as dbfile:
                         lines = dbfile.readlines()
-                    
-                    # Handle #load directives
                     for line in lines:
                         line = line.strip()
                         if line.startswith("#load"):
-                            # Support both "#load path" and "#load: path"
                             content = line[5:].strip()
                             if content.startswith(":"):
                                 content = content[1:].strip()
-                            load_file = content
-                            # Resolve path relative to current file
-                            load_path = (path.parent / load_file).resolve()
-                            
-                            # We need a temporary YamlDB or a way to load just the data
-                            # To keep it simple, we'll use a helper to load yaml data
+                            load_path = (path.parent / content).resolve()
                             loaded_data = self._load_yaml_file(load_path, _loaded_files)
                             if loaded_data:
-                                if self.data is None:
-                                    self.data = {}
+                                if self.data is None: self.data = {}
                                 self.data.update(loaded_data)
-
-                    # Load the actual file content
-                    with open(path, "r") as dbfile:
-                        file_data = self._yaml.load(dbfile) or {}
-                        # If we are loading a CommentedMap into a plain dict, 
-                        # replace it to preserve root-level comments.
-                        if not isinstance(self.data, MutableMapping) or not hasattr(self.data, 'ca'):
-                            self.data = file_data
-                        else:
-                            self.data.update(file_data)
             finally:
                 self._release_lock()
         
-        if is_top_level: # Only resolve variables at the top-level call
+        if is_top_level:
             self._resolve_variables()
             self._dirty = False
 
@@ -386,34 +349,7 @@ class YamlDB:
             console.error(f"Error loading file {path}: {e}")
             return {}
 
-    def _derive_key(self, password: str, salt: bytes) -> bytes:
-        """Derives a 32-byte key from a password and salt using PBKDF2."""
-        try:
-            from cryptography.hazmat.primitives import hashes
-            from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-            from cryptography.hazmat.backends import default_backend
-        except ImportError:
-            raise ImportError(
-                "The 'cryptography' library is required for the :encrypt: backend. "
-                "Please install it using: pip install 'yamldb[encrypt]'"
-            )
-        kdf = PBKDF2HMAC(
-            algorithm=hashes.SHA256(),
-            length=32,
-            salt=salt,
-            iterations=100000,
-            backend=default_backend(),
-        )
-        import base64
-        return base64.b64encode(kdf.derive(password.encode()))
 
-    def _to_plain_dict(self, data: Any) -> Any:
-        """Recursively converts CommentedMap or other mapping types to plain dicts."""
-        if isinstance(data, MutableMapping):
-            return {str(k): self._to_plain_dict(v) for k, v in data.items()}
-        elif isinstance(data, list):
-            return [self._to_plain_dict(i) for i in data]
-        return data
 
     def _resolve_variables(self) -> None:
         """Resolves variables in the form of {a.b} in the data."""
@@ -461,59 +397,14 @@ class YamlDB:
                 self.data.update(d)
 
     def save(self, filename: Optional[str] = None, indent: Optional[int] = None) -> None:
-        """
-        Saves the data to the specified filename atomically.
-
-        Args:
-            filename (str): The name of the file to save the data to. If not provided, the current filename will be used.
-            indent (int): The number of spaces to use for indentation. If not provided, the default indentation will be used.
-
-        Returns:
-            None
-        """
+        """Saves the data to the specified filename atomically."""
         name = filename or self.filename
-        path = Path(name)
         
         self._acquire_lock()
         try:
-            # Atomic write using a temporary file
-            if self.backend == ":encrypt:":
-                try:
-                    from cryptography.fernet import Fernet
-                except ImportError:
-                    raise ImportError(
-                        "The 'cryptography' library is required for the :encrypt: backend. "
-                        "Please install it using: pip install 'yamldb[encrypt]'"
-                    )
-                salt = os.urandom(16)
-                key = self._derive_key(self.password, salt)
-                f = Fernet(key)
-                # Convert CommentedMap to plain dict for JSON
-                import json
-                plain_data = self._to_plain_dict(self.data)
-                encrypted_data = f.encrypt(json.dumps(plain_data).encode('utf-8'))
-                with tempfile.NamedTemporaryFile(
-                    "wb", dir=path.parent, delete=False, suffix=".tmp"
-                ) as tf:
-                    tf.write(salt + encrypted_data)
-                    temp_name = tf.name
-            elif self.backend == ":binary:":
-                with tempfile.NamedTemporaryFile(
-                    "wb", dir=path.parent, delete=False, suffix=".tmp"
-                ) as tf:
-                    # Convert CommentedMap to plain dict for JSON
-                    import json
-                    plain_data = self._to_plain_dict(self.data)
-                    tf.write(json.dumps(plain_data).encode('utf-8'))
-                    temp_name = tf.name
-            else:
-                with tempfile.NamedTemporaryFile(
-                    "w", dir=path.parent, delete=False, suffix=".tmp"
-                ) as tf:
-                    self._yaml.dump(self.data, tf)
-                    temp_name = tf.name
+            if self._backend:
+                self._backend.save(name, self.data)
             
-            os.replace(temp_name, path)
             self._dirty = False
             if not getattr(self, '_initializing', False):
                 self._save_calls += 1
@@ -873,11 +764,63 @@ class YamlDB:
         with open(path, "w") as f:
             self._yaml.dump(self.data, f)
 
+    def count(self, query: str) -> int:
+        """
+        Counts the number of items matching the JMESPath query.
+
+        Args:
+            query (str): The JMESPath query string.
+
+        Returns:
+            int: The number of matching items.
+        """
+        res = self.search(query)
+        if isinstance(res, list):
+            return len(res)
+        return 1 if res is not None else 0
+
+    def upsert(self, key: str, value: Any, cast: Optional[Callable] = None) -> bool:
+        """
+        Updates an existing key or inserts a new one.
+        
+        Returns:
+            bool: True if a new key was inserted, False if an existing key was updated.
+        """
+        exists = key in self
+        self.set(key, value, cast=cast)
+        return not exists
+
+    def merge(self, data: Union[Dict, str]) -> None:
+        """
+        Deep merges another dictionary or YAML file into the current database.
+
+        Args:
+            data (Union[Dict, str]): A dictionary to merge, or a path to a YAML file.
+        """
+        if isinstance(data, str):
+            # Load from file
+            temp_db = YamlDB(filename=data, backend=":file:")
+            merge_data = temp_db.data
+        else:
+            merge_data = data
+
+        self._deep_merge(merge_data, self.data)
+        self._dirty = True
+        self.flush()
+
+    def _deep_merge(self, source: Dict, destination: Dict) -> None:
+        """Recursively merges source into destination."""
+        for key, value in source.items():
+            if isinstance(value, MutableMapping) and key in destination and isinstance(destination[key], MutableMapping):
+                self._deep_merge(value, destination[key])
+            else:
+                destination[key] = value
+
     def __str__(self) -> str:
         """Returns the YAML representation of the data as a string.
 
         Returns:
-            str: The YAML representation of the data.
+            str: The YAML string representation of the data.
         """
         if self.data is None:
             return ""

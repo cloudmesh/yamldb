@@ -158,7 +158,7 @@ print(f"Write Efficiency: {stats['write_efficiency']}")
 - `backend`: 
     - `:file:` (default): Standard human-readable YAML storage.
     - `:memory:`: In-memory storage (no disk I/O).
-    - `:binary:`: High-performance binary storage using `msgpack`.
+    - `:binary:`: High-performance binary storage using JSON serialization.
 - `auto_flush`: If `True` (default), changes are written to disk immediately unless inside a transaction.
 
 ## Advanced Features
@@ -175,6 +175,8 @@ db.convert_to_yaml("debug_export.yml")
 
 ### Secure Storage (Encryption)
 For sensitive data, use the `:encrypt:` backend. This encrypts the **entire database file** (including keys and structure) using AES-128 symmetric encryption.
+
+> **Note**: The `:encrypt:` backend is currently **experimental**. We are actively refining its implementation and would greatly appreciate your feedback!
 
 ```python
 # Initialize an encrypted database
@@ -197,7 +199,7 @@ YamlDB comes with a lightweight Web UI for visual data management.
 
 **To run the Web UI:**
 1. Install dependencies: `pip install fastapi uvicorn`
-2. Run the server: `python yamldb/run_webui.py`
+2. Run the server: `python yamldb/bin/run_webui.py`
 3. Open your browser to `http://localhost:8000`
 
 The Web UI allows you to browse the database tree, set/delete values via dot-notation, and monitor write efficiency in real-time.
