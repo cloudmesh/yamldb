@@ -8,18 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Added a YAML syntax checker in `util.py` that detects forbidden tab characters and other syntax errors, reporting the line and column numbers.
+- **Comment Preservation**: Migrated core engine to `ruamel.yaml` to preserve comments and formatting during read/write cycles.
+- **Secure Storage**: Implemented `:encrypt:` backend using `cryptography.fernet` with PBKDF2 key derivation and unique salts.
+- **Binary Storage**: Implemented `:binary:` backend for high-performance, non-human-readable storage.
+- **Advanced API**: Added `items_recursive()`, `find_all()`, `filter()`, and `update_many()` for complex data manipulation.
+- **Wildcard Support**: Added support for `*` wildcards in `__getitem__` and `get()` for bulk retrieval.
+- **Type Casting**: Added `get_as()` and explicit `cast` parameter in `set()` for type-safe operations.
+- **Write Metrics**: Added `get_stats()` to monitor write efficiency and I/O reduction.
+- **Export Tool**: Added `convert_to_yaml()` to export binary/encrypted data to human-readable YAML.
 
 ### Changed
-- Extensively rewrote `README.md` to include detailed feature descriptions, rich code examples, and a comprehensive API reference.
-- Added a Contributors section to `README.md`.
-- Updated `pyproject.toml` to use dynamic versioning from `VERSION` file.
-- Updated `pyproject.toml` classifiers to include `Topic :: Database` and remove Python 3.7 support.
-
-### Fixed
-- Fixed build failure in GitHub Actions by removing unnecessary dependency on `cloudmesh-ai-common` in `tests/test_delete.py`.
-
-## [1.0.10]
+- **Write Optimization**: Refined `auto_flush` and `_dirty` flag logic to significantly reduce disk I/O.
+- **Concurrency**: Replaced manual lock files with `portalocker` for robust cross-platform advisory locking.
 
 ### Added
 - Added atomic writes using temporary files to prevent data corruption during crashes.

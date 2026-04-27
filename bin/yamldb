@@ -1,0 +1,158 @@
+
+#!/usr/bin/env python
+import click
+import sys
+from yamldb.YamlDB import YamlDB
+
+@click.group()
+def cli():
+    """
+    YamlDB CLI - A simple YAML-based database tool for managing nested configuration.
+
+    Usage:
+      yamldb [OPTIONS] COMMAND [ARGS]...
+
+    Commands:
+      get     Retrieve a value from the database using dot-notation.
+      set     Set a value in the database. Creates parents if they don't exist.
+      delete  Remove a key from the database.
+      search  Query the database using JMESPath expressions.
+      stats   Display write efficiency and I/O statistics.
+
+    Examples:
+      yamldb get config.yml user.profile.name
+      yamldb set config.yml app.version 1.2.0
+      yamldb search config.yml "[?status=='active']"
+      yamldb stats config.yml
+
+    Options:
+      --help  Show this message and exit.
+    """
+    pass
+
+@cli.command()
+@click.argument("file")
+@click.argument("key")
+def get(file, key):
+    """
+    Retrieve a value from the database.
+
+    Usage:
+      yamldb get <file> <key>
+
+    Arguments:
+      file  Path to the YAML database file (e.g., config.yml).
+      key   The dot-notation path to the value (e.g., user.name).
+
+    Example:
+      yamldb get config.yml user.name
+    """
+    try:
+        db = YamlDB(filename=file)
+        click.echo(db.get(key))
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+@cli.command()
+@click.argument("file")
+@click.argument("key")
+@click.argument("value")
+def set(file, key, value):
+    """
+    Set a value in the database.
+
+    Usage:
+      yamldb set <file> <key> <value>
+
+    Arguments:
+      file   Path to the YAML database file.
+      key    The dot-notation path to set (e.g., app.settings.theme).
+      value  The value to store.
+
+    Example:
+      yamldb set config.yml app.settings.theme dark
+    """
+    try:
+        db = YamlDB(filename=file)
+        db.set(key, value)
+        click.echo(f"Set {key} = {value}")
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+@cli.command()
+@click.argument("file")
+@click.argument("key")
+def delete(file, key):
+    """
+    Delete a key from the database.
+
+    Usage:
+      yamldb delete <file> <key>
+
+    Arguments:
+      file  Path to the YAML database file.
+      key   The dot-notation path to the key to be removed.
+
+    Example:
+      yamldb delete config.yml user.old_setting
+    """
+    try:
+        db = YamlDB(filename=file)
+        db.delete(key)
+        click.echo(f"Deleted {key}")
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+@cli.command()
+@click.argument("file")
+@click.argument("query")
+def search(file, query):
+    """
+    Search the database using JMESPath expressions.
+
+    Usage:
+      yamldb search <file> <query>
+
+    Arguments:
+      file   Path to the YAML database file.
+      query  A valid JMESPath query string.
+
+    Example:
+      yamldb search config.yml "user[?age > \`20\`].name"
+    """
+    try:
+        db = YamlDB(filename=file)
+        click.echo(db.search(query))
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+@cli.command()
+@click.argument("file")
+def stats(file):
+    """
+    Show write efficiency and I/O statistics.
+
+    Usage:
+      yamldb stats <file>
+
+    Arguments:
+      file  Path to the YAML database file.
+
+    This command reports the number of set() calls versus actual disk writes,
+    calculating the efficiency gained by the internal dirty-flag mechanism.
+    """
+    try:
+        db = YamlDB(filename=file)
+        stats = db.get_stats()
+        for k, v in stats.items():
+            click.echo(f"{k}: {v}")
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+if __name__ == "__main__":
+    cli()
