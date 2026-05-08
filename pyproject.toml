@@ -12,7 +12,7 @@ dynamic = ["version"]
 description = "A file based database using yaml as file format"
 readme = "README.md"
 requires-python = ">=3.8"
-license = {file = "LICENSE"}
+license = {text = "Apache-2.0"}
 
 authors = [
   {name = "Gregor von Laszewski", email = "laszewski@gmail.com"}
