@@ -9,7 +9,7 @@ PACKAGE_NAME := $(shell basename $(CURDIR))
 VERSION_FILE := VERSION
 GIT          := git
 
-.PHONY: help install pip clean reinstall version test test-cov setup-test uninstall-all check-syntax
+.PHONY: help install pip clean reinstall version test test-html test-cov setup-test uninstall-all check-syntax
 
 help:
 	@echo
@@ -46,7 +46,10 @@ requirements:
 	pip-compile --output-file=requirements.txt pyproject.toml
 
 test:
-	pytest -v --html=.report.html
+	$(PYTHON) -m pytest -v
+
+test-html:
+	$(PYTHON) -m pytest -v --html=.report.html
 	open .report.html
 
 test-cov:
