@@ -12,7 +12,7 @@ dynamic = ["version"]
 description = "A file based database using yaml as file format"
 readme = "README.md"
 requires-python = ">=3.8"
-license = {text = "Apache-2.0"}
+license = "Apache-2.0"
 
 authors = [
   {name = "Gregor von Laszewski", email = "laszewski@gmail.com"}
@@ -34,10 +34,9 @@ classifiers = [
     "Intended Audience :: Education",
     "Intended Audience :: Science/Research",
     "Intended Audience :: System Administrators",
-    "License :: OSI Approved :: Apache Software License",
     "Natural Language :: English",
     "Operating System :: OS Independent",
-    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: MacOS",
     "Operating System :: POSIX :: Linux",
     "Operating System :: Microsoft :: Windows :: Windows 10",
     "Programming Language :: Python",
